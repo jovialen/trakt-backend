@@ -3,10 +3,12 @@ from typing import Annotated
 from fastapi import APIRouter, Query, HTTPException
 from sqlmodel import select
 
-from .model import Feed, FeedCreate, FeedPatch, FeedUpdate
 from ..database import SessionDep
+from ..utils import PaginationQuery, paginate
+from .model import Feed
+from .dto import FeedCreate, FeedPatch, FeedUpdate
 
-router = APIRouter(prefix="/feed", tags=["Feed"])
+router = APIRouter(prefix="/feeds", tags=["Feed"])
 
 
 @router.get("/new", response_model=FeedCreate)
@@ -15,8 +17,8 @@ def new_feed():
 
 
 @router.get("/", response_model=list[Feed])
-def get_routers(session: SessionDep, offset: int = 0, limit: Annotated[int, Query(le=100)] = 100):
-    routers = session.exec(select(Feed).offset(offset).limit(limit)).all()
+def get_routers(session: SessionDep, pagination: Annotated[PaginationQuery, Query()]):
+    routers = session.exec(paginate(select(Feed), pagination)).all()
     return routers
 
 

@@ -1,1 +1,8 @@
+# Database
+database.db
+
+# Python
+__pycache__/
+
+# Environment
 *.env*
