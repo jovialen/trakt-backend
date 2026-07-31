@@ -2,6 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from . import feed
 from .database import create_db_and_tables
 
 
@@ -12,3 +13,4 @@ async def lifespan(_app: FastAPI):
 
 
 app = FastAPI(lifespan=lifespan)
+app.include_router(feed.router)
