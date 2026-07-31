@@ -1,4 +1,4 @@
-from . import FeedBase
+from .model import FeedBase
 
 
 class FeedCreate(FeedBase):

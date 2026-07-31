@@ -1,4 +1,4 @@
-from pydantic import Field
+from pydantic import Field, BaseModel
 
 from trakt_backend.utils import PaginationQuery
 
