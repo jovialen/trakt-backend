@@ -5,6 +5,7 @@ from fastapi import APIRouter, HTTPException, Query
 from sqlmodel import col, select, update
 
 from ..database import SessionDep
+from ..feed_group.model import FeedGroupLink
 from ..utils import paginate
 from .dto import FeedItemQuery
 from .model import FeedItem
@@ -16,8 +17,13 @@ router = APIRouter(
 
 
 @router.get("/", response_model=list[FeedItem])
-def get_items(session: SessionDep, query: Annotated[FeedItemQuery, Query()]):
+def get_items(session: SessionDep, group_id: int | None, query: Annotated[FeedItemQuery, Query()]):
     db_query = select(FeedItem)
+
+    if group_id is not None:
+        db_query = db_query.join(
+            FeedGroupLink, col(FeedItem.feed_id) == FeedGroupLink.feed_id
+        ).where(col(FeedGroupLink.group_id) == group_id)
 
     if query.feed_id is not None:
         db_query = db_query.where(FeedItem.id == query.feed_id)

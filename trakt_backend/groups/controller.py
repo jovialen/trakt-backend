@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
+from .. import items
 from ..database import SessionDep
 from ..utils import PaginationQuery, paginate
 from .dto import FeedGroupCreate, FeedGroupUpdate
@@ -10,6 +11,8 @@ router = APIRouter(
     prefix="/groups",
     tags=["Groups"],
 )
+
+router.include_router(items.router, prefix="/{group_id}", tags=["Items", "Groups"])
 
 
 @router.get("/new", response_model=FeedGroupCreate)
