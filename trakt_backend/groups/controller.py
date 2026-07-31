@@ -1,8 +1,10 @@
 from fastapi import APIRouter, HTTPException
-from sqlmodel import select
+from sqlmodel import col, select
 
 from .. import items
 from ..database import SessionDep
+from ..feed_group.model import FeedGroupLink
+from ..feeds import Feed
 from ..utils import PaginationQuery, paginate
 from .dto import FeedGroupCreate, FeedGroupUpdate
 from .model import FeedGroup
@@ -12,7 +14,7 @@ router = APIRouter(
     tags=["Groups"],
 )
 
-router.include_router(items.router, prefix="/{group_id}", tags=["Items", "Groups"])
+router.include_router(items.router, prefix="/{group_id}", tags=["Group", "Items"])
 
 
 @router.get("/new", response_model=FeedGroupCreate)
@@ -91,6 +93,63 @@ def delete_group(group_id: int, session: SessionDep):
         raise HTTPException(status_code=404, detail="Group not found")
 
     session.delete(group)
+    session.commit()
+
+    return {"ok": True}
+
+
+@router.get("/{group_id}/feeds", response_model=list[Feed])
+def get_group_feeds(group_id: int, session: SessionDep):
+    group = session.get(FeedGroup, group_id)
+
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    feeds = session.exec(
+        select(Feed)
+        .join(FeedGroupLink, col(Feed.id) == FeedGroupLink.feed_id)
+        .where(col(FeedGroupLink.group_id) == group_id)
+    ).all()
+
+    return feeds
+
+
+@router.put("/{group_id}/feeds/{feed_id}", response_model=Feed)
+def add_feed_to_group(group_id: int, feed_id: int, session: SessionDep):
+    group = session.get(FeedGroup, group_id)
+
+    if not group:
+        raise HTTPException(status_code=404, detail="Group not found")
+
+    feed = session.get(Feed, feed_id)
+
+    if not feed:
+        raise HTTPException(status_code=404, detail="Feed not found")
+
+    session.add(FeedGroupLink(group_id=group_id, feed_id=feed_id))
+    session.commit()
+
+    feeds = session.exec(
+        select(Feed)
+        .join(FeedGroupLink, col(Feed.id) == FeedGroupLink.feed_id)
+        .where(col(FeedGroupLink.group_id) == group_id)
+    ).all()
+
+    return feeds
+
+
+@router.delete("/{group_id}/feeds/{feed_id}", response_model=Feed)
+def remove_feed_from_group(group_id: int, feed_id: int, session: SessionDep):
+    feed_group_link = session.exec(
+        select(FeedGroupLink).where(
+            col(FeedGroupLink.feed_id) == feed_id, col(FeedGroupLink.group_id) == group_id
+        )
+    ).one_or_none()
+
+    if not feed_group_link:
+        raise HTTPException(status_code=404, detail="Feed not found")
+
+    session.delete(feed_group_link)
     session.commit()
 
     return {"ok": True}
