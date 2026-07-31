@@ -1,0 +1,32 @@
+name: 🧹 Chore / maintenance
+description: Dependency bumps, refactors, tooling, CI, or other non-user-facing work.
+title: "[Chore]: "
+labels: ["chore"]
+body:
+  - type: dropdown
+    id: category
+    attributes:
+      label: Category
+      options:
+        - Dependency update
+        - Refactor
+        - Tooling / config
+        - CI / CD
+        - Docs
+        - Other
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: What needs to be done and why?
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Notes
+      description: Anything else worth capturing (risks, links, follow-ups).
+    validations:
+      required: false

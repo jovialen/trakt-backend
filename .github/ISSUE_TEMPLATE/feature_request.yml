@@ -1,0 +1,48 @@
+name: ✨ Feature / enhancement
+description: Suggest a new feature or an improvement to the site.
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the motivation. What's missing or could be better?
+      placeholder: There's no way to filter projects by the tech stack used.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: Describe what you'd like to build or change.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered
+      description: Any other approaches you thought about?
+    validations:
+      required: false
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Design / UI
+        - Content
+        - Performance
+        - Accessibility
+        - SEO
+        - Tooling / build
+        - Other
+    validations:
+      required: false
+  - type: textarea
+    id: notes
+    attributes:
+      label: Additional context
+      description: Mockups, references, links to sites doing this well, etc.
+    validations:
+      required: false
