@@ -1,8 +1,7 @@
-from sqlmodel import SQLModel, Field
-
+from sqlmodel import Field, SQLModel
 
 # A regex pattern which matches the majority of URLs which would be used as RSS feeds endpoints
-RSS_FEED_REGEX = r'(?i)\bhttps?://[^\s()<>]+(?:\bfeeds\b|\brss\b|\bxml\b|\batom\b|\.xml|\.rss|\?format=rss)[^\s()<>]*'
+RSS_FEED_REGEX = r"(?i)\bhttps?://[^\s()<>]+(?:\bfeeds\b|\brss\b|\bxml\b|\batom\b|\.xml|\.rss|\?format=rss)[^\s()<>]*"
 
 
 class FeedBase(SQLModel):

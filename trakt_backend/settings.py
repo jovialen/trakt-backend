@@ -4,9 +4,8 @@ from typing import Annotated
 from fastapi import Depends
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-
 APP_NAME = "Trakt API"
-DESCRIPTION ="The API for the Trakt RSS feed aggregator."
+DESCRIPTION = "The API for the Trakt RSS feed aggregator."
 VERSION = "0.1.0"
 
 
