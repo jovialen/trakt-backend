@@ -1,6 +1,4 @@
-from typing import Annotated
-
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, HTTPException
 from sqlmodel import select
 
 from ..database import SessionDep
@@ -17,7 +15,7 @@ def new_feed():
 
 
 @router.get("/", response_model=list[Feed])
-def get_routers(session: SessionDep, pagination: Annotated[PaginationQuery, Query()]):
+def get_routers(session: SessionDep, pagination: PaginationQuery):
     routers = session.exec(paginate(select(Feed), pagination)).all()
     return routers
 

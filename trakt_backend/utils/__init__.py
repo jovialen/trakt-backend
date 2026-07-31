@@ -1,1 +1,1 @@
-from .pagination import PaginationQuery, paginate
+from .pagination import Pagination, PaginationQuery, paginate
