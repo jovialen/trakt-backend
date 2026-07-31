@@ -5,7 +5,8 @@ from sqlmodel import select
 
 from ..database import SessionDep
 from ..utils import PaginationQuery, paginate
-from .model import Feed, FeedCreate, FeedPatch, FeedUpdate
+from .model import Feed
+from .dto import FeedCreate, FeedPatch, FeedUpdate
 
 router = APIRouter(prefix="/feeds", tags=["Feed"])
 

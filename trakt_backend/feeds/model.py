@@ -12,16 +12,3 @@ class FeedBase(SQLModel):
 
 class Feed(FeedBase, table=True):
     id: int = Field(default=None, primary_key=True)
-
-
-class FeedCreate(FeedBase):
-    pass
-
-
-class FeedUpdate(FeedBase):
-    pass
-
-
-class FeedPatch(FeedBase):
-    name: str | None = None
-    link: str | None = None

@@ -7,7 +7,7 @@ from sqlmodel import select, update, col
 from ..database import SessionDep
 from ..utils import paginate
 from .model import FeedItem
-from .query import FeedItemQuery
+from .dto import FeedItemQuery
 
 router = APIRouter(
     prefix="/items",
