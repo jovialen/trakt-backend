@@ -1,13 +1,13 @@
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import APIRouter, Query, HTTPException
-from sqlmodel import select, update, col
+from fastapi import APIRouter, HTTPException, Query
+from sqlmodel import col, select, update
 
 from ..database import SessionDep
 from ..utils import paginate
-from .model import FeedItem
 from .dto import FeedItemQuery
+from .model import FeedItem
 
 router = APIRouter(
     prefix="/items",
@@ -108,9 +108,7 @@ def bulk_read_items_later(item_ids: list[str], session: SessionDep):
         return []
 
     items = session.exec(
-        update(FeedItem)
-        .where(col(FeedItem.id).in_(item_ids))
-        .values(read_later=True)
+        update(FeedItem).where(col(FeedItem.id).in_(item_ids)).values(read_later=True)
     ).all()
     session.commit()
 
@@ -123,9 +121,7 @@ def bulk_save_items(item_ids: list[str], session: SessionDep):
         return []
 
     items = session.exec(
-        update(FeedItem)
-        .where(col(FeedItem.id).in_(item_ids))
-        .values(saved_at=datetime.now())
+        update(FeedItem).where(col(FeedItem.id).in_(item_ids)).values(saved_at=datetime.now())
     ).all()
     session.commit()
 

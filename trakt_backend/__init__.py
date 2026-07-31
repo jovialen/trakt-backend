@@ -1,2 +1,2 @@
-from .database import SessionDep, Session
-from .settings import SettingsDep, Settings
+from .database import Session, SessionDep
+from .settings import Settings, SettingsDep

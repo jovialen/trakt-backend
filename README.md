@@ -11,7 +11,7 @@ You can start the dev server by typing the following commands into a terminal in
 
 ```commandline
 poetry install
-poetry run fastapi dev ./trakt_backend 
+poetry run fastapi dev ./trakt_backend
 ```
 
 In order to deploy the backend, run the following command

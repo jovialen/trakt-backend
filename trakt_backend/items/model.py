@@ -1,6 +1,7 @@
 from datetime import datetime
+from typing import Self
 
-from sqlmodel import SQLModel, Field
+from sqlmodel import Field, SQLModel
 
 
 class RSS2Item(SQLModel):
@@ -16,7 +17,7 @@ class RSS2Item(SQLModel):
     categories: str
     content: str
 
-    def from_parsed(self, feed: dict) -> RSS2Item:
+    def from_parsed(self, feed: dict) -> Self:
         self.id = feed.get("id", None)
         self.guid = feed.get("guid", None)
         self.title = feed.get("title", None)

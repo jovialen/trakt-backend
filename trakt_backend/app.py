@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 from . import feeds, items
-from .settings import *
 from .database import create_db_and_tables
+from .settings import APP_NAME, DESCRIPTION, VERSION
 
 
 @asynccontextmanager
@@ -13,12 +13,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-app = FastAPI(
-    title=APP_NAME,
-    description=DESCRIPTION,
-    version=VERSION,
-    lifespan=lifespan
-)
+app = FastAPI(title=APP_NAME, description=DESCRIPTION, version=VERSION, lifespan=lifespan)
 
 app.include_router(feeds.router)
 app.include_router(items.router)
