@@ -1,9 +1,9 @@
 from pydantic import Field
 
-from trakt_backend.utils import PaginationQuery
+from trakt_backend.utils import Pagination
 
 
-class FeedItemQuery(PaginationQuery):
+class FeedItemQuery(Pagination):
     feed_id: int | None = Field(default=None)
     unread: bool | None = Field(default=None)
     saved: bool | None = Field(default=None)

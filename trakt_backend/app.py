@@ -2,7 +2,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from . import feeds, items
+from . import feeds, groups, items
 from .database import create_db_and_tables
 from .settings import APP_NAME, DESCRIPTION, VERSION
 
@@ -17,6 +17,7 @@ app = FastAPI(title=APP_NAME, description=DESCRIPTION, version=VERSION, lifespan
 
 app.include_router(feeds.router)
 app.include_router(items.router)
+app.include_router(groups.router)
 
 
 @app.get("/", tags=["App"])

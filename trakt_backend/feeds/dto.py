@@ -1,14 +1,34 @@
-from .model import FeedBase
+from typing import Self
+
+from pydantic import BaseModel
+
+from .model import Feed, FeedBase
 
 
-class FeedCreate(FeedBase):
+class FeedDtoBase(FeedBase):
+    groups: list[int]
+
+
+class FeedCreate(FeedDtoBase):
     pass
 
 
-class FeedUpdate(FeedBase):
+class FeedUpdate(FeedDtoBase):
     pass
 
 
-class FeedPatch(FeedBase):
+class FeedPatch(BaseModel):
     name: str | None = None
     link: str | None = None
+    groups: list[int] | None = None
+
+
+class FeedRead(FeedDtoBase):
+    id: int
+
+    @classmethod
+    def from_feed(cls, feed: Feed) -> Self:
+        return cls(
+            **feed.model_dump(),
+            groups=[group.id for group in feed.groups],
+        )

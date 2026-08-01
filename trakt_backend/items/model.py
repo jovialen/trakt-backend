@@ -45,4 +45,4 @@ class FeedItemBase(SQLModel):
 
 
 class FeedItem(FeedItemBase, RSS2Item, table=True):
-    pass
+    __tablename__ = "item"

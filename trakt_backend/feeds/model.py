@@ -1,4 +1,11 @@
-from sqlmodel import Field, SQLModel
+from typing import TYPE_CHECKING
+
+from sqlmodel import Field, Relationship, SQLModel
+
+# Circular import here, but since its only because of type checking, this is an acceptable solution
+if TYPE_CHECKING:
+    from ..groups.model import FeedGroup
+from ..feed_group.model import FeedGroupLink
 
 # A regex pattern which matches the majority of URLs which would be used as RSS feeds endpoints
 RSS_FEED_REGEX = r"(?i)\bhttps?://[^\s()<>]+(?:\bfeeds\b|\brss\b|\bxml\b|\batom\b|\.xml|\.rss|\?format=rss)[^\s()<>]*"
@@ -11,3 +18,10 @@ class FeedBase(SQLModel):
 
 class Feed(FeedBase, table=True):
     id: int = Field(default=None, primary_key=True)
+
+    # noinspection type-hints
+    groups: list[FeedGroup] = Relationship(
+        back_populates="feeds",
+        link_model=FeedGroupLink,
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
