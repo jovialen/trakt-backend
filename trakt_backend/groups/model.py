@@ -17,4 +17,8 @@ class FeedGroup(FeedGroupBase, table=True):
 
     id: int = Field(default=None, primary_key=True)
 
-    feeds: list[Feed] = Relationship(back_populates="groups", link_model=FeedGroupLink)
+    feeds: list[Feed] = Relationship(
+        back_populates="groups",
+        link_model=FeedGroupLink,
+        sa_relationship_kwargs={"passive_deletes": True},
+    )

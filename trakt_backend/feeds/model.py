@@ -20,4 +20,8 @@ class Feed(FeedBase, table=True):
     id: int = Field(default=None, primary_key=True)
 
     # noinspection type-hints
-    groups: list[FeedGroup] = Relationship(back_populates="feeds", link_model=FeedGroupLink)
+    groups: list[FeedGroup] = Relationship(
+        back_populates="feeds",
+        link_model=FeedGroupLink,
+        sa_relationship_kwargs={"passive_deletes": True},
+    )
