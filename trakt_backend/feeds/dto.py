@@ -12,3 +12,8 @@ class FeedUpdate(FeedBase):
 class FeedPatch(FeedBase):
     name: str | None = None
     link: str | None = None
+
+
+class FeedRead(FeedBase):
+    id: int
+    groups: list[int]

@@ -3,7 +3,7 @@ from sqlmodel import select
 
 from ..database import SessionDep
 from ..utils import PaginationQuery, paginate
-from .dto import FeedCreate, FeedPatch, FeedUpdate
+from .dto import FeedCreate, FeedPatch, FeedRead, FeedUpdate
 from .model import Feed
 
 router = APIRouter(prefix="/feeds", tags=["Feed"])
@@ -14,10 +14,18 @@ def new_feed():
     return Feed(name="New Feed", link="https://new.feed")
 
 
-@router.get("/", response_model=list[Feed])
-def get_routers(session: SessionDep, pagination: PaginationQuery):
-    routers = session.exec(paginate(select(Feed), pagination)).all()
-    return routers
+@router.get("/", response_model=list[FeedRead])
+def get_feeds(session: SessionDep, pagination: PaginationQuery):
+    feeds = session.exec(paginate(select(Feed), pagination)).all()
+    return list(
+        map(
+            lambda feed: FeedRead(
+                **feed.model_dump(),
+                groups=[group.id for group in feed.groups],
+            ),
+            feeds,
+        )
+    )
 
 
 @router.post("/", response_model=Feed)
@@ -31,14 +39,14 @@ def create_feed(session: SessionDep, feed: FeedCreate):
     return db_feed
 
 
-@router.get("/{feed_id}", response_model=Feed)
+@router.get("/{feed_id}", response_model=FeedRead)
 def get_feed(feed_id: int, session: SessionDep):
     feed = session.get(Feed, feed_id)
 
     if not feed:
         raise HTTPException(status_code=404, detail="Feed not found")
 
-    return feed
+    return FeedRead(**feed.model_dump(), groups=[group.id for group in feed.groups])
 
 
 @router.put("/{feed_id}", response_model=Feed)
