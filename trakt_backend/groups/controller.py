@@ -1,20 +1,18 @@
-from fastapi import APIRouter, HTTPException
-from sqlmodel import col, select
+from fastapi import APIRouter
 
 from .. import items
-from ..database import SessionDep
-from ..feed_group.model import FeedGroupLink
-from ..feeds import Feed
-from ..utils import PaginationQuery, paginate
+from ..feeds import Feed, FeedServiceDep
+from ..utils import PaginationQuery
 from .dto import FeedGroupCreate, FeedGroupUpdate
 from .model import FeedGroup
+from .service import FeedGroupServiceDep
 
 router = APIRouter(
     prefix="/groups",
-    tags=["Groups"],
+    tags=["Feed groups"],
 )
 
-router.include_router(items.router, prefix="/{group_id}", tags=["Group", "Items"])
+router.include_router(items.router, prefix="/{group_id}", tags=["Feed groups"])
 
 
 @router.get("/new", response_model=FeedGroupCreate)
@@ -23,133 +21,56 @@ def new_group():
 
 
 @router.get("/", response_model=list[FeedGroup])
-def get_groups(pagination: PaginationQuery, session: SessionDep):
-    groups = session.exec(paginate(select(FeedGroup), pagination)).all()
-    return groups
+def list_groups(pagination: PaginationQuery, groups: FeedGroupServiceDep):
+    return groups.all(pagination)
 
 
 @router.post("/", response_model=FeedGroup)
-def create_group(group: FeedGroupCreate, session: SessionDep):
-    db_group = FeedGroup.model_validate(group)
-
-    session.add(db_group)
-    session.commit()
-    session.refresh(db_group)
-
-    return db_group
+def create_group(group: FeedGroupCreate, groups: FeedGroupServiceDep):
+    return groups.create(group)
 
 
 @router.get("/{group_id}", response_model=FeedGroup)
-def get_group(group_id: int, session: SessionDep):
-    group = session.get(FeedGroup, group_id)
-
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    return group
+def get_group(group_id: int, groups: FeedGroupServiceDep):
+    return groups.get(group_id)
 
 
 @router.put("/{group_id}", response_model=FeedGroup)
-def update_group(group_id: int, group: FeedGroupUpdate, session: SessionDep):
-    db_group = session.get(FeedGroup, group_id)
-
-    if not db_group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    updates = group.model_dump()
-    for key, value in updates.values():
-        setattr(db_group, key, value)
-
-    session.add(db_group)
-    session.commit()
-    session.refresh(db_group)
-
-    return db_group
+def update_group(group_id: int, group: FeedGroupUpdate, groups: FeedGroupServiceDep):
+    return groups.update(group_id, group)
 
 
 @router.patch("/{group_id}", response_model=FeedGroup)
-def patch_group(group_id: int, group: FeedGroupUpdate, session: SessionDep):
-    db_group = session.get(FeedGroup, group_id)
-
-    if not db_group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    updates = group.model_dump(exclude_unset=True)
-    for key, value in updates.values():
-        setattr(db_group, key, value)
-
-    session.add(db_group)
-    session.commit()
-    session.refresh(db_group)
-
-    return db_group
+def patch_group(group_id: int, group: FeedGroupUpdate, groups: FeedGroupServiceDep):
+    return groups.patch(group_id, group)
 
 
 @router.delete("/{group_id}", response_model=FeedGroup)
-def delete_group(group_id: int, session: SessionDep):
-    group = session.get(FeedGroup, group_id)
-
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    session.delete(group)
-    session.commit()
-
-    return {"ok": True}
+def delete_group(group_id: int, groups: FeedGroupServiceDep):
+    return groups.delete(group_id)
 
 
 @router.get("/{group_id}/feeds", response_model=list[Feed])
-def get_group_feeds(group_id: int, session: SessionDep):
-    group = session.get(FeedGroup, group_id)
-
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    feeds = session.exec(
-        select(Feed)
-        .join(FeedGroupLink, col(Feed.id) == FeedGroupLink.feed_id)
-        .where(col(FeedGroupLink.group_id) == group_id)
-    ).all()
-
-    return feeds
+def get_group_feeds(group_id: int, groups: FeedGroupServiceDep):
+    group = groups.get(group_id)
+    return groups.get_feeds(group)
 
 
 @router.put("/{group_id}/feeds/{feed_id}", response_model=Feed)
-def add_feed_to_group(group_id: int, feed_id: int, session: SessionDep):
-    group = session.get(FeedGroup, group_id)
-
-    if not group:
-        raise HTTPException(status_code=404, detail="Group not found")
-
-    feed = session.get(Feed, feed_id)
-
-    if not feed:
-        raise HTTPException(status_code=404, detail="Feed not found")
-
-    session.add(FeedGroupLink(group_id=group_id, feed_id=feed_id))
-    session.commit()
-
-    feeds = session.exec(
-        select(Feed)
-        .join(FeedGroupLink, col(Feed.id) == FeedGroupLink.feed_id)
-        .where(col(FeedGroupLink.group_id) == group_id)
-    ).all()
-
-    return feeds
+def add_feed_to_group(
+    group_id: int, feed_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep
+):
+    group = groups.get(group_id)
+    feed = feeds.get(feed_id)
+    groups.add_feed(group, feed)
+    return groups.get_feeds(group)
 
 
 @router.delete("/{group_id}/feeds/{feed_id}", response_model=Feed)
-def remove_feed_from_group(group_id: int, feed_id: int, session: SessionDep):
-    feed_group_link = session.exec(
-        select(FeedGroupLink).where(
-            col(FeedGroupLink.feed_id) == feed_id, col(FeedGroupLink.group_id) == group_id
-        )
-    ).one_or_none()
-
-    if not feed_group_link:
-        raise HTTPException(status_code=404, detail="Feed not found")
-
-    session.delete(feed_group_link)
-    session.commit()
-
-    return {"ok": True}
+def remove_feed_from_group(
+    group_id: int, feed_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep
+):
+    group = groups.get(group_id)
+    feed = feeds.get(feed_id)
+    groups.remove_feed(group, feed)
+    return groups.get_feeds(group)
