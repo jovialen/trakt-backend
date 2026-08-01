@@ -1,6 +1,8 @@
+from typing import Self
+
 from pydantic import BaseModel
 
-from .model import FeedBase
+from .model import Feed, FeedBase
 
 
 class FeedDtoBase(FeedBase):
@@ -23,3 +25,10 @@ class FeedPatch(BaseModel):
 
 class FeedRead(FeedDtoBase):
     id: int
+
+    @classmethod
+    def from_feed(cls, feed: Feed) -> Self:
+        return cls(
+            **feed.model_dump(),
+            groups=[group.id for group in feed.groups],
+        )

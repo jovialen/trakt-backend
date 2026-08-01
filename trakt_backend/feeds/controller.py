@@ -13,21 +13,13 @@ router = APIRouter(prefix="/feeds", tags=["Feed"])
 
 @router.get("/new", response_model=FeedCreate)
 def new_feed():
-    return Feed(name="New Feed", link="https://new.feed")
+    return FeedCreate(name="New Feed", link="https://new.feed", groups=[1])
 
 
 @router.get("/", response_model=list[FeedRead])
 def get_feeds(session: SessionDep, pagination: PaginationQuery):
     feeds = session.exec(paginate(select(Feed), pagination)).all()
-    return list(
-        map(
-            lambda feed: FeedRead(
-                **feed.model_dump(),
-                groups=[group.id for group in feed.groups],
-            ),
-            feeds,
-        )
-    )
+    return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
 
 
 @router.post("/", response_model=FeedRead)
@@ -44,7 +36,7 @@ def create_feed(session: SessionDep, feed: FeedCreate):
     session.commit()
     db_feed = session.get(Feed, db_feed.id)
 
-    return FeedRead(**db_feed.model_dump(), groups=[group.id for group in db_feed.groups])
+    return FeedRead.from_feed(db_feed)
 
 
 @router.get("/{feed_id}", response_model=FeedRead)
@@ -54,7 +46,7 @@ def get_feed(feed_id: int, session: SessionDep):
     if not feed:
         raise HTTPException(status_code=404, detail="Feed not found")
 
-    return FeedRead(**feed.model_dump(), groups=[group.id for group in feed.groups])
+    return FeedRead.from_feed(feed)
 
 
 @router.put("/{feed_id}", response_model=FeedRead)
@@ -77,7 +69,7 @@ def update_feed(feed_id: int, session: SessionDep, feed: FeedUpdate):
     session.commit()
     db_feed = session.get(Feed, db_feed.id)
 
-    return FeedRead(**db_feed.model_dump(), groups=[group.id for group in db_feed.groups])
+    return FeedRead.from_feed(db_feed)
 
 
 @router.patch("/{feed_id}", response_model=FeedRead)
@@ -102,7 +94,7 @@ def patch_feed(feed_id: int, session: SessionDep, patch: FeedPatch):
 
     db_feed = session.get(Feed, db_feed.id)
 
-    return FeedRead(**db_feed.model_dump(), groups=[group.id for group in db_feed.groups])
+    return FeedRead.from_feed(db_feed)
 
 
 @router.delete("/{feed_id}")
