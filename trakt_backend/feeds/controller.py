@@ -1,14 +1,13 @@
-from fastapi import APIRouter, HTTPException
-from sqlalchemy import delete
-from sqlmodel import select
+from fastapi import APIRouter
 
-from ..database import SessionDep
-from ..feed_group import FeedGroupLink
-from ..utils import PaginationQuery, paginate
+from .. import items
+from ..utils import PaginationQuery
 from .dto import FeedCreate, FeedPatch, FeedRead, FeedUpdate
-from .model import Feed
+from .service import FeedServiceDep
 
 router = APIRouter(prefix="/feeds", tags=["Feed"])
+
+router.include_router(items.router, prefix="/{feed_id}", tags=["Feed"])
 
 
 @router.get("/new", response_model=FeedCreate)
@@ -17,94 +16,30 @@ def new_feed():
 
 
 @router.get("/", response_model=list[FeedRead])
-def get_feeds(session: SessionDep, pagination: PaginationQuery):
-    feeds = session.exec(paginate(select(Feed), pagination)).all()
-    return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
+def list_feeds(pagination: PaginationQuery, feeds: FeedServiceDep):
+    return feeds.all(pagination)
 
 
 @router.post("/", response_model=FeedRead)
-def create_feed(session: SessionDep, feed: FeedCreate):
-    db_feed = Feed.model_validate(feed.model_dump(exclude={"groups"}))
-
-    session.add(db_feed)
-    session.flush()
-    session.refresh(db_feed)
-
-    for group_id in feed.groups:
-        session.add(FeedGroupLink(feed_id=db_feed.id, group_id=group_id))
-
-    session.commit()
-    db_feed = session.get(Feed, db_feed.id)
-
-    return FeedRead.from_feed(db_feed)
+def create_feed(feed: FeedCreate, feeds: FeedServiceDep):
+    return feeds.create(feed)
 
 
 @router.get("/{feed_id}", response_model=FeedRead)
-def get_feed(feed_id: int, session: SessionDep):
-    feed = session.get(Feed, feed_id)
-
-    if not feed:
-        raise HTTPException(status_code=404, detail="Feed not found")
-
-    return FeedRead.from_feed(feed)
+def get_feed(feed_id: int, feeds: FeedServiceDep):
+    return feeds.get(feed_id)
 
 
 @router.put("/{feed_id}", response_model=FeedRead)
-def update_feed(feed_id: int, session: SessionDep, feed: FeedUpdate):
-    db_feed = session.get(Feed, feed_id)
-
-    if not db_feed:
-        raise HTTPException(status_code=404, detail="Feed not found")
-
-    updates = feed.model_dump(exclude={"groups"})
-    for key, value in updates.items():
-        setattr(db_feed, key, value)
-
-    session.exec(delete(FeedGroupLink).where(FeedGroupLink.feed_id == feed_id))
-
-    for group_id in feed.groups:
-        session.add(FeedGroupLink(feed_id=feed_id, group_id=group_id))
-
-    session.add(db_feed)
-    session.commit()
-    db_feed = session.get(Feed, db_feed.id)
-
-    return FeedRead.from_feed(db_feed)
+def update_feed(feed_id: int, feed: FeedUpdate, feeds: FeedServiceDep):
+    return feeds.update(feed_id, feed)
 
 
 @router.patch("/{feed_id}", response_model=FeedRead)
-def patch_feed(feed_id: int, session: SessionDep, patch: FeedPatch):
-    db_feed = session.get(Feed, feed_id)
-
-    if not db_feed:
-        raise HTTPException(status_code=404, detail="Feed not found")
-
-    updates = patch.model_dump(exclude_unset=True, exclude={"groups"})
-    for key, value in updates.items():
-        setattr(db_feed, key, value)
-
-    if patch.groups is not None:
-        session.exec(delete(FeedGroupLink).where(FeedGroupLink.feed_id == feed_id))
-
-        for group_id in patch.groups:
-            session.add(FeedGroupLink(feed_id=feed_id, group_id=group_id))
-
-    session.add(db_feed)
-    session.commit()
-
-    db_feed = session.get(Feed, db_feed.id)
-
-    return FeedRead.from_feed(db_feed)
+def patch_feed(feed_id: int, patch: FeedPatch, feeds: FeedServiceDep):
+    return feeds.patch(feed_id, patch)
 
 
 @router.delete("/{feed_id}")
-def delete_feed(feed_id: int, session: SessionDep):
-    feed = session.get(Feed, feed_id)
-
-    if not feed:
-        raise HTTPException(status_code=404, detail="Feed not found")
-
-    session.delete(feed)
-    session.commit()
-
-    return {"ok": True}
+def delete_feed(feed_id: int, feeds: FeedServiceDep):
+    return feeds.delete(feed_id)

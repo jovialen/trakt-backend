@@ -27,7 +27,7 @@ class FeedRead(FeedDtoBase):
     id: int
 
     @classmethod
-    def from_feed(cls, feed: Feed) -> Self:
+    def from_feed(cls, feed: Feed | type[Feed]) -> Self:
         return cls(
             **feed.model_dump(),
             groups=[group.id for group in feed.groups],
