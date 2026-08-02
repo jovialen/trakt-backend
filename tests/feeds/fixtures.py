@@ -3,13 +3,14 @@ from sqlmodel import Session
 
 from trakt_backend.feeds import Feed, FeedService
 from trakt_backend.groups import FeedGroup
+from trakt_backend.jobs import JobsDep
 
 from .factory import FeedFactory
 
 
 @pytest.fixture
-def feed_service(session: Session):
-    return FeedService(session)
+def feed_service(session: Session, jobs: JobsDep):
+    return FeedService(session, jobs)
 
 
 def add_feed(feed: Feed, session: Session):

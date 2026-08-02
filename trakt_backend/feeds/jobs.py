@@ -1,9 +1,9 @@
 from logging import debug, info
 
 import feedparser
-from database import engine
 from sqlmodel import Session
 
+from ..database import engine
 from ..jobs import Job
 from .model import Feed
 
