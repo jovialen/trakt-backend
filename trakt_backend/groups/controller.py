@@ -85,3 +85,11 @@ def remove_feed_from_group(
     feed = feeds.get(feed_id)
     groups.remove_feed(group, feed)
     return groups.get_feeds(group)
+
+
+@router.post("/{group_id}/feeds/sync")
+async def sync_group_feeds(group_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep):
+    group = groups.get(group_id)
+
+    for feed in group.feeds:
+        await feeds.sync(feed)

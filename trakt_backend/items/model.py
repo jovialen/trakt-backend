@@ -1,4 +1,5 @@
 from datetime import datetime
+from time import struct_time
 from typing import TYPE_CHECKING, Self
 
 from sqlmodel import Field, Relationship, SQLModel
@@ -9,7 +10,6 @@ if TYPE_CHECKING:
 
 class RSS2Item(SQLModel):
     id: str = Field(default=None, primary_key=True)
-    guid: str = Field(unique=True)
     title: str
     link: str
     summary: str
@@ -19,29 +19,41 @@ class RSS2Item(SQLModel):
     categories: str
     content: str
 
-    def from_parsed(self, feed: dict) -> Self:
-        self.id = feed.get("id", None)
-        self.guid = feed.get("guid", None)
-        self.title = feed.get("title", None)
-        self.link = feed.get("link", None)
-        self.summary = feed.get("summary", None)
-        self.published_at = feed.get("published_parsed", None)
-        self.updated_at = feed.get("updated_parsed", None)
-        self.authors = feed.get("authors", [])
-        self.categories = feed.get("categories", [])
-        self.content = feed.get("content", None)
+    def import_from_parsed(self, entry: dict) -> Self:
+        self.id = entry.get("id") or entry.get("guid") or entry.get("link", "")
+        self.title = entry.get("title", "")
+        self.link = entry.get("link", "")
+        self.summary = entry.get("summary", "")
 
-        if (author := feed.get("author")) is not None and author not in self.authors:
-            self.authors.insert(0, author)
+        self.published_at = self._parse_feed_time(entry.get("published_parsed", None))
+        self.updated_at = self._parse_feed_time(entry.get("updated_parsed", None))
 
-        self.authors = ";".join(self.authors)
-        self.categories = ";".join(self.categories)
+        self.authors = ", ".join(
+            author.get("name", "") for author in entry.get("authors", []) if author.get("name")
+        ) or entry.get("author", "")
+
+        self.categories = ", ".join(tag["term"] for tag in entry.get("tags", []) if "term" in tag)
+
+        self.content = "\n\n".join(
+            c.get("value", "") for c in entry.get("content", [])
+        ) or entry.get("summary", "")
 
         return self
 
+    @classmethod
+    def _parse_feed_time(cls, value) -> datetime:
+        if value is None:
+            return datetime.now()
+
+        if isinstance(value, datetime):
+            return value
+
+        if isinstance(value, struct_time):
+            return datetime(*value[:6])
+
 
 class FeedItemBase(SQLModel):
-    feed_id: int = Field(foreign_key="feed.id", nullable=False, index=True)
+    feed_id: int = Field(foreign_key="feed.id", primary_key=True)
 
     read_at: datetime | None = Field(default=None, nullable=True, index=True)
     read_later: bool = Field(default=False, index=True)

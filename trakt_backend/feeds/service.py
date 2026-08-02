@@ -6,14 +6,17 @@ from sqlmodel import select
 
 from ..database import SessionDep
 from ..feed_group import FeedGroupLink
+from ..jobs import JobsDep, QueueManager
 from ..utils import PaginationQuery, paginate
 from .dto import FeedCreate, FeedPatch, FeedUpdate
+from .jobs import FeedSyncJob
 from .model import Feed
 
 
 class FeedService:
-    def __init__(self, session: SessionDep):
+    def __init__(self, session: SessionDep, jobs: QueueManager):
         self.session = session
+        self.jobs = jobs
 
     def all(self, pagination: PaginationQuery | None = None) -> list[Feed]:
         query = select(Feed)
@@ -81,6 +84,9 @@ class FeedService:
 
         return {"ok": True}
 
+    async def sync(self, feed: Feed):
+        await self.jobs.add(FeedSyncJob(feed))
+
     def _add_groups_to_feed(self, feed: Feed | type[Feed], group_ids: list[int]):
         self.session.exec(delete(FeedGroupLink).where(FeedGroupLink.feed_id == feed.id))
 
@@ -99,8 +105,8 @@ class FeedService:
             self._add_groups_to_feed(feed, changes.groups)
 
 
-def get_feed_service(session: SessionDep):
-    yield FeedService(session)
+def get_feed_service(session: SessionDep, jobs: JobsDep):
+    yield FeedService(session, jobs)
 
 
 FeedServiceDep = Annotated[FeedService, Depends(get_feed_service)]
