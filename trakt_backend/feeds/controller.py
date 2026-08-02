@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, status
 
 from .. import items
 from ..utils import PaginationQuery
@@ -20,7 +20,7 @@ def list_feeds(pagination: PaginationQuery, feeds: FeedServiceDep):
     return feeds.all(pagination)
 
 
-@router.post("/", response_model=FeedRead)
+@router.post("/", response_model=FeedRead, status_code=status.HTTP_201_CREATED)
 def create_feed(feed: FeedCreate, feeds: FeedServiceDep):
     return feeds.create(feed)
 

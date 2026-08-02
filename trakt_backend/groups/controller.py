@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from .. import items
-from ..feeds import Feed, FeedServiceDep
+from ..feeds import FeedRead, FeedServiceDep
 from ..utils import PaginationQuery
 from .dto import FeedGroupCreate, FeedGroupUpdate
 from .model import FeedGroup
@@ -45,18 +45,18 @@ def patch_group(group_id: int, group: FeedGroupUpdate, groups: FeedGroupServiceD
     return groups.patch(group_id, group)
 
 
-@router.delete("/{group_id}", response_model=FeedGroup)
+@router.delete("/{group_id}")
 def delete_group(group_id: int, groups: FeedGroupServiceDep):
     return groups.delete(group_id)
 
 
-@router.get("/{group_id}/feeds", response_model=list[Feed])
+@router.get("/{group_id}/feeds", response_model=list[FeedRead])
 def get_group_feeds(group_id: int, groups: FeedGroupServiceDep):
     group = groups.get(group_id)
     return groups.get_feeds(group)
 
 
-@router.put("/{group_id}/feeds/{feed_id}", response_model=Feed)
+@router.put("/{group_id}/feeds/{feed_id}", response_model=list[FeedRead])
 def add_feed_to_group(
     group_id: int, feed_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep
 ):
@@ -66,7 +66,7 @@ def add_feed_to_group(
     return groups.get_feeds(group)
 
 
-@router.delete("/{group_id}/feeds/{feed_id}", response_model=Feed)
+@router.delete("/{group_id}/feeds/{feed_id}", response_model=list[FeedRead])
 def remove_feed_from_group(
     group_id: int, feed_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep
 ):

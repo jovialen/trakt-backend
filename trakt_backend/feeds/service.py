@@ -15,7 +15,7 @@ class FeedService:
     def __init__(self, session: SessionDep):
         self.session = session
 
-    def all(self, pagination: PaginationQuery | None = None):
+    def all(self, pagination: PaginationQuery | None = None) -> list[FeedRead]:
         query = select(Feed)
 
         if pagination is not None:
@@ -24,7 +24,7 @@ class FeedService:
         feeds = self.session.exec(query).all()
         return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
 
-    def create(self, feed: FeedCreate):
+    def create(self, feed: FeedCreate) -> FeedRead:
         db_feed = Feed.model_validate(feed.model_dump(exclude={"groups"}))
 
         self.session.add(db_feed)
@@ -38,7 +38,7 @@ class FeedService:
 
         return FeedRead.from_feed(db_feed)
 
-    def get(self, feed_id: int):
+    def get(self, feed_id: int) -> FeedRead:
         feed = self.session.get(Feed, feed_id)
 
         if not feed:
@@ -46,7 +46,7 @@ class FeedService:
 
         return FeedRead.from_feed(feed)
 
-    def update(self, feed_id: int, feed: FeedUpdate):
+    def update(self, feed_id: int, feed: FeedUpdate) -> FeedRead:
         db_feed = self.session.get(Feed, feed_id)
 
         if not db_feed:
@@ -58,7 +58,7 @@ class FeedService:
 
         return FeedRead.from_feed(db_feed)
 
-    def patch(self, feed_id: int, patch: FeedPatch):
+    def patch(self, feed_id: int, patch: FeedPatch) -> FeedRead:
         db_feed = self.session.get(Feed, feed_id)
 
         if not db_feed:
@@ -90,7 +90,7 @@ class FeedService:
     def _patch_feed(self, feed: Feed | type[Feed], changes: FeedPatch | FeedUpdate):
         updates = changes.model_dump(exclude={"groups"}, exclude_unset=True)
 
-        for key, value in updates.values():
+        for key, value in updates.items():
             setattr(feed, key, value)
 
         self.session.add(feed)

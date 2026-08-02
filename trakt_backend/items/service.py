@@ -22,7 +22,7 @@ class FeedItemService:
         self.feed_scope_id = feed_scope_id
 
     def all(self, query: Annotated[FeedItemQuery, Query()]):
-        db_query = query.query()
+        db_query = query.query(select(FeedItem))
         db_query = self._scope_query(db_query)
         items = self.session.exec(db_query).all()
         return items
@@ -75,13 +75,18 @@ class FeedItemService:
         if not item_ids:
             return []
 
-        items = self.session.exec(
-            self._scope_query(
-                update(FeedItem)
-                .where(col(FeedItem.id).in_(item_ids))
-                .values(read_at=datetime.now(), read_later=False)
+        items = (
+            self.session.exec(
+                self._scope_query(
+                    update(FeedItem)
+                    .where(col(FeedItem.id).in_(item_ids))
+                    .values(read_at=datetime.now(), read_later=False)
+                    .returning(FeedItem)
+                )
             )
-        ).all()
+            .scalars()
+            .all()
+        )
 
         if commit:
             self.session.commit()
@@ -92,11 +97,18 @@ class FeedItemService:
         if not item_ids:
             return []
 
-        items = self.session.exec(
-            self._scope_query(
-                update(FeedItem).where(col(FeedItem.id).in_(item_ids)).values(read_later=True)
+        items = (
+            self.session.exec(
+                self._scope_query(
+                    update(FeedItem)
+                    .where(col(FeedItem.id).in_(item_ids))
+                    .values(read_later=True)
+                    .returning(FeedItem)
+                )
             )
-        ).all()
+            .scalars()
+            .all()
+        )
 
         if commit:
             self.session.commit()
@@ -107,13 +119,18 @@ class FeedItemService:
         if not item_ids:
             return []
 
-        items = self.session.exec(
-            self._scope_query(
-                update(FeedItem)
-                .where(col(FeedItem.id).in_(item_ids))
-                .values(saved_at=datetime.now())
+        items = (
+            self.session.exec(
+                self._scope_query(
+                    update(FeedItem)
+                    .where(col(FeedItem.id).in_(item_ids))
+                    .values(saved_at=datetime.now())
+                    .returning(FeedItem)
+                )
             )
-        ).all()
+            .scalars()
+            .all()
+        )
 
         if commit:
             self.session.commit()
@@ -127,7 +144,7 @@ class FeedItemService:
             )
 
         if self.feed_scope_id is not None:
-            query = query.where(FeedItem.id == self.feed_scope_id)
+            query = query.where(col(FeedItem.feed_id) == self.feed_scope_id)
 
         return query
 

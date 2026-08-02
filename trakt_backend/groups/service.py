@@ -5,7 +5,7 @@ from sqlmodel import col, select
 
 from ..database import SessionDep
 from ..feed_group import FeedGroupLink
-from ..feeds import Feed
+from ..feeds import Feed, FeedRead
 from ..utils import PaginationQuery, paginate
 from .dto import FeedGroupCreate, FeedGroupPatch, FeedGroupUpdate
 from .model import FeedGroup
@@ -83,7 +83,7 @@ class FeedGroupService:
             .where(col(FeedGroupLink.group_id) == group.id)
         ).all()
 
-        return feeds
+        return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
 
     def add_feed(self, group: FeedGroup, feed: Feed):
         self.session.add(FeedGroupLink(group_id=group.id, feed_id=feed.id))
@@ -106,7 +106,7 @@ class FeedGroupService:
         self, group: FeedGroup | type[FeedGroup], patch: FeedGroupPatch | FeedGroupUpdate
     ):
         changes = patch.model_dump(exclude_unset=True)
-        for key, value in changes.values():
+        for key, value in changes.items():
             setattr(group, key, value)
         self.session.add(group)
 
