@@ -59,7 +59,7 @@ def test_create_feed_with_groups(
 
     created = feed_service.create(feed)
 
-    assert created.groups == [news_group.id]
+    assert created.groups == [news_group]
 
 
 def test_get_feed(feed_service: FeedService, nrk_feed: Feed):
@@ -117,16 +117,16 @@ def test_patch_feed(feed_service: FeedService, nrk_feed: Feed):
 
 def test_patch_feed_groups(
     feed_service: FeedService,
-    nrk_feed: Feed,
-    news_group,
+    google_feed: Feed,
+    technology_group,
 ):
     patch = FeedPatch(
-        groups=[news_group.id],
+        groups=[technology_group.id],
     )
 
-    updated = feed_service.patch(nrk_feed.id, patch)
+    updated = feed_service.patch(google_feed.id, patch)
 
-    assert updated.groups == [news_group.id]
+    assert updated.groups == [technology_group]
 
 
 def test_patch_feed_not_found(feed_service: FeedService):

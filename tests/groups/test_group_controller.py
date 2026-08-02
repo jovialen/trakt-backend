@@ -1,3 +1,13 @@
+def test_new_group(client):
+    response = client.get("/groups/new")
+
+    assert response.status_code == 200
+
+    payload = response.json()
+
+    assert payload["name"] == "New Group"
+
+
 def test_list_groups(client):
     response = client.get("/groups/")
 
@@ -13,7 +23,7 @@ def test_create_group(client):
         },
     )
 
-    assert response.status_code == 200
+    assert response.status_code == 201
 
     data = response.json()
 
@@ -80,6 +90,22 @@ def test_get_group_feeds(client, news_group, nrk_feed):
 
     assert len(feeds) == 1
     assert nrk_feed.id in [feed["id"] for feed in feeds]
+
+
+def test_add_feed_to_group(client, blogs_group, tekno_feed):
+    before = client.get(f"/groups/{blogs_group.id}/feeds/{tekno_feed.id}")
+    assert before.status_code == 404, "found feed not in grouo"
+
+    response = client.put(f"/groups/{blogs_group.id}/feeds/{tekno_feed.id}")
+    assert response.status_code == 200, "failed to add feed to group"
+
+    persistence = client.get(f"/groups/{blogs_group.id}/feeds/{tekno_feed.id}")
+    assert persistence.status_code == 200, "failed to find feed in group"
+
+
+def test_add_missing_feed_to_group(client, blogs_group):
+    response = client.put(f"/groups/{blogs_group.id}/feeds/999999")
+    assert response.status_code == 404
 
 
 def test_remove_feed_from_group(client, news_group, nrk_feed):

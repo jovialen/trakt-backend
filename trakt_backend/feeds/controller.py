@@ -17,27 +17,31 @@ def new_feed():
 
 @router.get("/", response_model=list[FeedRead])
 def list_feeds(pagination: PaginationQuery, feeds: FeedServiceDep):
-    return feeds.all(pagination)
+    return map(lambda feed: FeedRead.from_feed(feed), feeds.all(pagination))
 
 
 @router.post("/", response_model=FeedRead, status_code=status.HTTP_201_CREATED)
 def create_feed(feed: FeedCreate, feeds: FeedServiceDep):
-    return feeds.create(feed)
+    feed = feeds.create(feed)
+    return FeedRead.from_feed(feed)
 
 
 @router.get("/{feed_id}", response_model=FeedRead)
 def get_feed(feed_id: int, feeds: FeedServiceDep):
-    return feeds.get(feed_id)
+    feed = feeds.get(feed_id)
+    return FeedRead.from_feed(feed)
 
 
 @router.put("/{feed_id}", response_model=FeedRead)
 def update_feed(feed_id: int, feed: FeedUpdate, feeds: FeedServiceDep):
-    return feeds.update(feed_id, feed)
+    feed = feeds.update(feed_id, feed)
+    return FeedRead.from_feed(feed)
 
 
 @router.patch("/{feed_id}", response_model=FeedRead)
 def patch_feed(feed_id: int, patch: FeedPatch, feeds: FeedServiceDep):
-    return feeds.patch(feed_id, patch)
+    feed = feeds.patch(feed_id, patch)
+    return FeedRead.from_feed(feed)
 
 
 @router.delete("/{feed_id}")

@@ -7,7 +7,7 @@ from sqlmodel import select
 from ..database import SessionDep
 from ..feed_group import FeedGroupLink
 from ..utils import PaginationQuery, paginate
-from .dto import FeedCreate, FeedPatch, FeedRead, FeedUpdate
+from .dto import FeedCreate, FeedPatch, FeedUpdate
 from .model import Feed
 
 
@@ -15,16 +15,16 @@ class FeedService:
     def __init__(self, session: SessionDep):
         self.session = session
 
-    def all(self, pagination: PaginationQuery | None = None) -> list[FeedRead]:
+    def all(self, pagination: PaginationQuery | None = None) -> list[Feed]:
         query = select(Feed)
 
         if pagination is not None:
             query = paginate(query, pagination)
 
         feeds = self.session.exec(query).all()
-        return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
+        return feeds
 
-    def create(self, feed: FeedCreate) -> FeedRead:
+    def create(self, feed: FeedCreate) -> Feed:
         db_feed = Feed(**feed.model_dump(exclude={"groups"}))
 
         self.session.add(db_feed)
@@ -36,17 +36,17 @@ class FeedService:
         self.session.commit()
         db_feed = self.session.get(Feed, db_feed.id)
 
-        return FeedRead.from_feed(db_feed)
+        return db_feed
 
-    def get(self, feed_id: int) -> FeedRead:
+    def get(self, feed_id: int) -> Feed:
         feed = self.session.get(Feed, feed_id)
 
         if not feed:
             raise HTTPException(status_code=404, detail="Feed not found")
 
-        return FeedRead.from_feed(feed)
+        return feed
 
-    def update(self, feed_id: int, feed: FeedUpdate) -> FeedRead:
+    def update(self, feed_id: int, feed: FeedUpdate) -> Feed:
         db_feed = self.session.get(Feed, feed_id)
 
         if not db_feed:
@@ -56,9 +56,9 @@ class FeedService:
         self.session.commit()
         db_feed = self.session.get(Feed, db_feed.id)
 
-        return FeedRead.from_feed(db_feed)
+        return db_feed
 
-    def patch(self, feed_id: int, patch: FeedPatch) -> FeedRead:
+    def patch(self, feed_id: int, patch: FeedPatch) -> Feed:
         db_feed = self.session.get(Feed, feed_id)
 
         if not db_feed:
@@ -68,7 +68,7 @@ class FeedService:
         self.session.commit()
         db_feed = self.session.get(Feed, db_feed.id)
 
-        return FeedRead.from_feed(db_feed)
+        return db_feed
 
     def delete(self, feed_id: int):
         feed = self.session.get(Feed, feed_id)

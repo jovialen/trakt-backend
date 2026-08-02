@@ -1,4 +1,4 @@
-from fastapi import APIRouter
+from fastapi import APIRouter, HTTPException, status
 
 from .. import items
 from ..feeds import FeedRead, FeedServiceDep
@@ -25,7 +25,7 @@ def list_groups(pagination: PaginationQuery, groups: FeedGroupServiceDep):
     return groups.all(pagination)
 
 
-@router.post("/", response_model=FeedGroup)
+@router.post("/", response_model=FeedGroup, status_code=status.HTTP_201_CREATED)
 def create_group(group: FeedGroupCreate, groups: FeedGroupServiceDep):
     return groups.create(group)
 
@@ -54,6 +54,17 @@ def delete_group(group_id: int, groups: FeedGroupServiceDep):
 def get_group_feeds(group_id: int, groups: FeedGroupServiceDep):
     group = groups.get(group_id)
     return groups.get_feeds(group)
+
+
+@router.get("/{group_id}/feeds/{feed_id}", response_model=FeedRead)
+def get_group_feed(group_id: int, feed_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep):
+    group = groups.get(group_id)
+    feed = feeds.get(feed_id)
+
+    if feed not in group.feeds:
+        raise HTTPException(status_code=404, detail="Feed not in group")
+
+    return FeedRead.from_feed(feed)
 
 
 @router.put("/{group_id}/feeds/{feed_id}", response_model=list[FeedRead])
