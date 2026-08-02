@@ -18,24 +18,24 @@ def list_items(query: Annotated[FeedItemQuery, Depends()], items: FeedItemServic
 
 
 @router.get("/{item_id}", response_model=FeedItem)
-def get_item(item_id: int, items: FeedItemServiceDep):
+def get_item(item_id: str, items: FeedItemServiceDep):
     return items.get(item_id)
 
 
 @router.post("/{item_id}/read", response_model=FeedItem)
-def read_item(item_id: int, items: FeedItemServiceDep):
+def read_item(item_id: str, items: FeedItemServiceDep):
     item = items.get(item_id)
     return items.mark_read(item)
 
 
 @router.post("/{item_id}/read_later", response_model=FeedItem)
-def read_item_later(item_id: int, items: FeedItemServiceDep):
+def read_item_later(item_id: str, items: FeedItemServiceDep):
     item = items.get(item_id)
-    return item.mark_read_later(item)
+    return items.read_later(item)
 
 
 @router.post("/{item_id}/save", response_model=FeedItem)
-def save_item(item_id: int, items: FeedItemServiceDep):
+def save_item(item_id: str, items: FeedItemServiceDep):
     item = items.get(item_id)
     return items.save(item)
 

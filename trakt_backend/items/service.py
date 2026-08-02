@@ -21,13 +21,13 @@ class FeedItemService:
         self.group_scope_id = group_scope_id
         self.feed_scope_id = feed_scope_id
 
-    def all(self, query: Annotated[FeedItemQuery, Query()]):
+    def all(self, query: Annotated[FeedItemQuery, Query()]) -> list[FeedItem]:
         db_query = query.query(select(FeedItem))
         db_query = self._scope_query(db_query)
         items = self.session.exec(db_query).all()
         return items
 
-    def get(self, item_id: int):
+    def get(self, item_id: int) -> FeedItem:
         item = self.session.exec(
             self._scope_query(select(FeedItem).where(col(FeedItem.id) == item_id))
         ).one_or_none()
@@ -37,7 +37,7 @@ class FeedItemService:
 
         return item
 
-    def mark_read(self, item: FeedItem, commit: bool = True):
+    def mark_read(self, item: FeedItem, commit: bool = True) -> FeedItem:
         item.read_later = False
         item.read_at = datetime.now()
 
@@ -49,7 +49,7 @@ class FeedItemService:
 
         return item
 
-    def read_later(self, item: FeedItem, commit: bool = True):
+    def read_later(self, item: FeedItem, commit: bool = True) -> FeedItem:
         item.read_later = True
 
         self.session.add(item)
@@ -60,7 +60,7 @@ class FeedItemService:
 
         return item
 
-    def save(self, item: FeedItem, commit: bool = True):
+    def save(self, item: FeedItem, commit: bool = True) -> FeedItem:
         item.saved_at = datetime.now()
 
         self.session.add(item)
@@ -71,71 +71,64 @@ class FeedItemService:
 
         return item
 
-    def bulk_mark_read(self, item_ids: list[str], commit: bool = True):
+    def bulk_get(self, item_ids: list[str]) -> list[FeedItem]:
+        items = self.session.exec(select(FeedItem).where(col(FeedItem.id).in_(item_ids))).all()
+        return items
+
+    def bulk_mark_read(self, item_ids: list[str], commit: bool = True) -> list[FeedItem]:
         if not item_ids:
             return []
 
-        items = (
+        (
             self.session.exec(
                 self._scope_query(
                     update(FeedItem)
                     .where(col(FeedItem.id).in_(item_ids))
                     .values(read_at=datetime.now(), read_later=False)
-                    .returning(FeedItem)
                 )
             )
-            .scalars()
-            .all()
         )
 
         if commit:
             self.session.commit()
 
-        return items
+        return self.bulk_get(item_ids)
 
-    def bulk_read_later(self, item_ids: list[str], commit: bool = True):
+    def bulk_read_later(self, item_ids: list[str], commit: bool = True) -> list[FeedItem]:
         if not item_ids:
             return []
 
-        items = (
+        (
             self.session.exec(
                 self._scope_query(
-                    update(FeedItem)
-                    .where(col(FeedItem.id).in_(item_ids))
-                    .values(read_later=True)
-                    .returning(FeedItem)
+                    update(FeedItem).where(col(FeedItem.id).in_(item_ids)).values(read_later=True)
                 )
             )
-            .scalars()
-            .all()
         )
 
         if commit:
             self.session.commit()
 
-        return items
+        return self.bulk_get(item_ids)
 
-    def bulk_save(self, item_ids: list[str], commit: bool = True):
+    def bulk_save(self, item_ids: list[str], commit: bool = True) -> list[FeedItem]:
         if not item_ids:
             return []
 
-        items = (
+        (
             self.session.exec(
                 self._scope_query(
                     update(FeedItem)
                     .where(col(FeedItem.id).in_(item_ids))
                     .values(saved_at=datetime.now())
-                    .returning(FeedItem)
                 )
             )
-            .scalars()
-            .all()
         )
 
         if commit:
             self.session.commit()
 
-        return items
+        return self.bulk_get(item_ids)
 
     def _scope_query(self, query):
         if self.group_scope_id is not None:

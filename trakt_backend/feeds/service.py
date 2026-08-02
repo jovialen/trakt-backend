@@ -25,7 +25,7 @@ class FeedService:
         return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
 
     def create(self, feed: FeedCreate) -> FeedRead:
-        db_feed = Feed.model_validate(feed.model_dump(exclude={"groups"}))
+        db_feed = Feed(**feed.model_dump(exclude={"groups"}))
 
         self.session.add(db_feed)
         self.session.flush()
