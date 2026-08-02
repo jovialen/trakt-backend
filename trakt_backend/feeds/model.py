@@ -5,6 +5,7 @@ from sqlmodel import Field, Relationship, SQLModel
 # Circular import here, but since its only because of type checking, this is an acceptable solution
 if TYPE_CHECKING:
     from ..groups.model import FeedGroup
+    from ..items.model import FeedItem
 from ..feed_group.model import FeedGroupLink
 
 # A regex pattern which matches the majority of URLs which would be used as RSS feeds endpoints
@@ -24,4 +25,8 @@ class Feed(FeedBase, table=True):
         back_populates="feeds",
         link_model=FeedGroupLink,
         sa_relationship_kwargs={"passive_deletes": True},
+    )
+
+    items: list[FeedItem] = Relationship(
+        back_populates="feed",
     )

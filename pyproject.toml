@@ -6,7 +6,7 @@ authors = [
     {name = "Nicolai Frigaard",email = "46283121+jovialen@users.noreply.github.com"}
 ]
 readme = "README.md"
-requires-python = ">=3.13"
+requires-python = ">=3.13,<4.0"
 dependencies = [
     "fastapi[standard] (>=0.141.1,<0.142.0)",
     "sqlmodel (>=0.0.39,<0.0.40)",
@@ -23,6 +23,12 @@ build-backend = "poetry.core.masonry.api"
 ruff = "^0.16.1"
 pre-commit = "^4.6.1"
 mypy = "^2.3.0"
+pytest = "^9.1.1"
+pytest-cov = "^7.1.0"
+httpx = "^0.28.1"
+pytest-asyncio = "^1.4.0"
+polyfactory = "^3.3.0"
+faker = "^40.36.0"
 
 [tool.ruff]
 line-length = 100
@@ -43,3 +49,17 @@ select = [
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+addopts = "-v --cov=trakt_backend --cov-report=term-missing"
+asyncio_mode = "auto"
+
+[tool.coverage.run]
+branch = true
+source = ["trakt_backend"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 95

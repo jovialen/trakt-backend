@@ -1,13 +1,15 @@
 from datetime import datetime
-from typing import Self
+from typing import TYPE_CHECKING, Self
 
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
+
+if TYPE_CHECKING:
+    from ..feeds import Feed
 
 
 class RSS2Item(SQLModel):
     id: str = Field(default=None, primary_key=True)
     guid: str = Field(unique=True)
-    feed_id: int = Field(foreign_key="feed.id", nullable=False, index=True)
     title: str
     link: str
     summary: str
@@ -39,6 +41,8 @@ class RSS2Item(SQLModel):
 
 
 class FeedItemBase(SQLModel):
+    feed_id: int = Field(foreign_key="feed.id", nullable=False, index=True)
+
     read_at: datetime | None = Field(default=None, nullable=True, index=True)
     read_later: bool = Field(default=False, index=True)
     saved_at: datetime | None = Field(default=None, nullable=True)
@@ -46,3 +50,5 @@ class FeedItemBase(SQLModel):
 
 class FeedItem(FeedItemBase, RSS2Item, table=True):
     __tablename__ = "item"
+
+    feed: Feed = Relationship(back_populates="items")
