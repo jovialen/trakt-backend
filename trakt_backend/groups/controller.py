@@ -3,7 +3,7 @@ from fastapi import APIRouter, HTTPException, status
 from .. import items
 from ..feeds import FeedRead, FeedServiceDep
 from ..utils import PaginationQuery
-from .dto import FeedGroupCreate, FeedGroupUpdate
+from .dto import FeedGroupCreate, FeedGroupPatch, FeedGroupUpdate
 from .model import FeedGroup
 from .service import FeedGroupServiceDep
 
@@ -32,28 +32,53 @@ def create_group(group: FeedGroupCreate, groups: FeedGroupServiceDep):
 
 @router.get("/{group_id}", response_model=FeedGroup)
 def get_group(group_id: int, groups: FeedGroupServiceDep):
-    return groups.get(group_id)
+    group = groups.get(group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    return group
 
 
 @router.put("/{group_id}", response_model=FeedGroup)
-def update_group(group_id: int, group: FeedGroupUpdate, groups: FeedGroupServiceDep):
-    return groups.update(group_id, group)
+def update_group(group_id: int, update: FeedGroupUpdate, groups: FeedGroupServiceDep):
+    group = groups.get(group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    return groups.update(group, update)
 
 
 @router.patch("/{group_id}", response_model=FeedGroup)
-def patch_group(group_id: int, group: FeedGroupUpdate, groups: FeedGroupServiceDep):
-    return groups.patch(group_id, group)
+def patch_group(group_id: int, patch: FeedGroupPatch, groups: FeedGroupServiceDep):
+    group = groups.get(group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    return groups.patch(group, patch)
 
 
 @router.delete("/{group_id}")
 def delete_group(group_id: int, groups: FeedGroupServiceDep):
-    return groups.delete(group_id)
+    group = groups.get(group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    groups.delete(group)
+    return {"ok": True}
 
 
 @router.get("/{group_id}/feeds", response_model=list[FeedRead])
 def get_group_feeds(group_id: int, groups: FeedGroupServiceDep):
     group = groups.get(group_id)
-    return groups.get_feeds(group)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    return list(map(lambda f: FeedRead.from_feed(f), groups.get_feeds(group)))
 
 
 @router.get("/{group_id}/feeds/{feed_id}", response_model=FeedRead)
@@ -61,8 +86,14 @@ def get_group_feed(group_id: int, feed_id: int, groups: FeedGroupServiceDep, fee
     group = groups.get(group_id)
     feed = feeds.get(feed_id)
 
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    if feed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+
     if feed not in group.feeds:
-        raise HTTPException(status_code=404, detail="Feed not in group")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not in group")
 
     return FeedRead.from_feed(feed)
 
@@ -73,8 +104,15 @@ def add_feed_to_group(
 ):
     group = groups.get(group_id)
     feed = feeds.get(feed_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    if feed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+
     groups.add_feed(group, feed)
-    return groups.get_feeds(group)
+    return list(map(lambda f: FeedRead.from_feed(f), groups.get_feeds(group)))
 
 
 @router.delete("/{group_id}/feeds/{feed_id}", response_model=list[FeedRead])
@@ -83,13 +121,25 @@ def remove_feed_from_group(
 ):
     group = groups.get(group_id)
     feed = feeds.get(feed_id)
-    groups.remove_feed(group, feed)
-    return groups.get_feeds(group)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
+
+    if feed is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not found")
+
+    if groups.remove_feed(group, feed):
+        return list(map(lambda f: FeedRead.from_feed(f), groups.get_feeds(group)))
+    else:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not in group")
 
 
 @router.post("/{group_id}/feeds/sync")
 async def sync_group_feeds(group_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep):
     group = groups.get(group_id)
+
+    if group is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Group not found")
 
     for feed in group.feeds:
         await feeds.queue_sync(feed)

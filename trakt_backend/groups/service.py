@@ -1,11 +1,12 @@
+from collections.abc import Sequence
 from typing import Annotated
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from sqlmodel import col, select
 
 from ..database import SessionDep
 from ..feed_group import FeedGroupLink
-from ..feeds import Feed, FeedRead
+from ..feeds import Feed
 from ..utils import PaginationQuery, paginate
 from .dto import FeedGroupCreate, FeedGroupPatch, FeedGroupUpdate
 from .model import FeedGroup
@@ -15,7 +16,9 @@ class FeedGroupService:
     def __init__(self, session: SessionDep):
         self.session = session
 
-    def all(self, pagination: PaginationQuery | None = None):
+    def all(
+        self, pagination: PaginationQuery | None = None
+    ) -> Sequence[FeedGroup | type[FeedGroup]]:
         query = select(FeedGroup)
 
         if pagination is not None:
@@ -24,7 +27,7 @@ class FeedGroupService:
         groups = self.session.exec(query).all()
         return groups
 
-    def create(self, group: FeedGroupCreate):
+    def create(self, group: FeedGroupCreate) -> FeedGroup | type[FeedGroup]:
         db_group = FeedGroup.model_validate(group)
 
         self.session.add(db_group)
@@ -33,63 +36,44 @@ class FeedGroupService:
 
         return db_group
 
-    def get(self, group_id: int):
+    def get(self, group_id: int) -> FeedGroup | type[FeedGroup] | None:
         group = self.session.get(FeedGroup, group_id)
-
-        if not group:
-            raise HTTPException(status_code=404, detail="Group not found")
-
         return group
 
-    def update(self, group_id: int, group: FeedGroupUpdate):
-        db_group = self.session.get(FeedGroup, group_id)
-
-        if not db_group:
-            raise HTTPException(status_code=404, detail="Group not found")
-
-        self._patch_group(db_group, group)
+    def update(
+        self, group: FeedGroup | type[FeedGroup], update: FeedGroupUpdate
+    ) -> FeedGroup | type[FeedGroup]:
+        self._patch_group(group, update)
         self.session.commit()
-        self.session.refresh(db_group)
+        self.session.refresh(group)
+        return group
 
-        return db_group
-
-    def patch(self, group_id: int, group: FeedGroupUpdate):
-        db_group = self.session.get(FeedGroup, group_id)
-
-        if not db_group:
-            raise HTTPException(status_code=404, detail="Group not found")
-
-        self._patch_group(db_group, group)
+    def patch(
+        self, group: FeedGroup | type[FeedGroup], patch: FeedGroupPatch
+    ) -> FeedGroup | type[FeedGroup]:
+        self._patch_group(group, patch)
         self.session.commit()
-        self.session.refresh(db_group)
+        self.session.refresh(group)
+        return group
 
-        return db_group
-
-    def delete(self, group_id: int):
-        group = self.session.get(FeedGroup, group_id)
-
-        if not group:
-            raise HTTPException(status_code=404, detail="Group not found")
-
+    def delete(self, group: FeedGroup | type[FeedGroup]):
         self.session.delete(group)
         self.session.commit()
 
-        return {"ok": True}
-
-    def get_feeds(self, group: FeedGroup):
+    def get_feeds(self, group: FeedGroup | type[FeedGroup]) -> Sequence[Feed | type[Feed]]:
         feeds = self.session.exec(
             select(Feed)
             .join(FeedGroupLink, col(Feed.id) == FeedGroupLink.feed_id)
             .where(col(FeedGroupLink.group_id) == group.id)
         ).all()
 
-        return list(map(lambda feed: FeedRead.from_feed(feed), feeds))
+        return feeds
 
-    def add_feed(self, group: FeedGroup, feed: Feed):
+    def add_feed(self, group: FeedGroup | type[FeedGroup], feed: Feed | type[Feed]):
         self.session.add(FeedGroupLink(group_id=group.id, feed_id=feed.id))
         self.session.commit()
 
-    def remove_feed(self, group: FeedGroup, feed: Feed):
+    def remove_feed(self, group: FeedGroup | type[FeedGroup], feed: Feed | type[Feed]):
         feed_group_link = self.session.exec(
             select(FeedGroupLink).where(
                 col(FeedGroupLink.feed_id) == feed.id, col(FeedGroupLink.group_id) == group.id
@@ -97,10 +81,11 @@ class FeedGroupService:
         ).one_or_none()
 
         if not feed_group_link:
-            raise HTTPException(status_code=404, detail="Feed not found")
+            return False
 
         self.session.delete(feed_group_link)
         self.session.commit()
+        return True
 
     def _patch_group(
         self, group: FeedGroup | type[FeedGroup], patch: FeedGroupPatch | FeedGroupUpdate

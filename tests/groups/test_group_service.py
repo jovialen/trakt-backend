@@ -1,6 +1,3 @@
-import pytest
-from fastapi import HTTPException
-
 from trakt_backend.feeds import Feed
 from trakt_backend.groups import (
     FeedGroup,
@@ -30,66 +27,37 @@ def test_create_group(group_service: FeedGroupService):
 def test_get_group(group_service: FeedGroupService, news_group: FeedGroup):
     group = group_service.get(news_group.id)
 
+    assert group is not None
     assert group.id == news_group.id
     assert group.name == "News"
 
 
 def test_get_missing_group(group_service: FeedGroupService):
-    with pytest.raises(HTTPException) as exc_info:
-        group_service.get(99999)
-
-    assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "Group not found"
+    assert group_service.get(99999) is None
 
 
 def test_update_group(group_service: FeedGroupService, news_group: FeedGroup):
     update = FeedGroupUpdate(name="Updated news_group")
 
-    updated = group_service.update(news_group.id, update)
+    updated = group_service.update(news_group, update)
 
     assert updated.name == "Updated news_group"
-
-
-def test_update_missing_group(group_service: FeedGroupService):
-    update = FeedGroupUpdate(name="Missing")
-
-    with pytest.raises(HTTPException) as exc_info:
-        group_service.update(99999, update)
-
-    assert exc_info.value.status_code == 404
 
 
 def test_patch_group(group_service: FeedGroupService, news_group: FeedGroup):
     patch = FeedGroupPatch(name="Patched news_group")
 
-    updated = group_service.patch(news_group.id, patch)
+    updated = group_service.patch(news_group, patch)
 
     assert updated.name == "Patched news_group"
 
 
-def test_patch_missing_group(group_service: FeedGroupService):
-    patch = FeedGroupPatch(name="Missing")
-
-    with pytest.raises(HTTPException) as exc_info:
-        group_service.patch(99999, patch)
-
-    assert exc_info.value.status_code == 404
-
-
 def test_delete_group(group_service: FeedGroupService, news_group: FeedGroup):
-    result = group_service.delete(news_group.id)
+    group_id = news_group.id
 
-    assert result == {"ok": True}
+    group_service.delete(news_group)
 
-    with pytest.raises(HTTPException):
-        group_service.get(news_group.id)
-
-
-def test_delete_missing_group(group_service: FeedGroupService):
-    with pytest.raises(HTTPException) as exc_info:
-        group_service.delete(99999)
-
-    assert exc_info.value.status_code == 404
+    assert group_service.get(group_id) is None
 
 
 def test_add_feed(
@@ -110,7 +78,7 @@ def test_remove_feed(
     news_group: FeedGroup,
     nrk_feed: Feed,
 ):
-    group_service.remove_feed(news_group, nrk_feed)
+    assert group_service.remove_feed(news_group, nrk_feed) is True
 
     feeds = group_service.get_feeds(news_group)
 
@@ -122,7 +90,4 @@ def test_remove_missing_feed_from_group(
     technology_group: FeedGroup,
     nrk_feed: Feed,
 ):
-    with pytest.raises(HTTPException) as exc_info:
-        group_service.remove_feed(technology_group, nrk_feed)
-
-    assert exc_info.value.status_code == 404
+    assert group_service.remove_feed(technology_group, nrk_feed) is False

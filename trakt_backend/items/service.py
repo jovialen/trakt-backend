@@ -1,7 +1,8 @@
+from collections.abc import Sequence
 from datetime import datetime
 from typing import Annotated
 
-from fastapi import Depends, HTTPException, Query, Request
+from fastapi import Depends, Query, Request
 from sqlmodel import col, select, update
 
 from ..database import SessionDep
@@ -21,113 +22,92 @@ class FeedItemService:
         self.group_scope_id = group_scope_id
         self.feed_scope_id = feed_scope_id
 
-    def all(self, query: Annotated[FeedItemQuery, Query()]) -> list[FeedItem]:
+    def all(self, query: Annotated[FeedItemQuery, Query()]) -> Sequence[FeedItem | type[FeedItem]]:
         db_query = query.query(select(FeedItem))
         db_query = self._scope_query(db_query)
         items = self.session.exec(db_query).all()
         return items
 
-    def get(self, item_id: int) -> FeedItem:
+    def get(self, item_id: str) -> FeedItem | type[FeedItem] | None:
         item = self.session.exec(
             self._scope_query(select(FeedItem).where(col(FeedItem.id) == item_id))
         ).one_or_none()
 
         if not item:
-            raise HTTPException(status_code=404, detail="Item not found")
+            return None
 
         return item
 
-    def mark_read(self, item: FeedItem, commit: bool = True) -> FeedItem:
+    def mark_read(self, item: FeedItem | type[FeedItem]) -> FeedItem | type[FeedItem]:
         item.read_later = False
         item.read_at = datetime.now()
 
         self.session.add(item)
-
-        if commit:
-            self.session.commit()
-            self.session.refresh(item)
+        self.session.commit()
+        self.session.refresh(item)
 
         return item
 
-    def read_later(self, item: FeedItem, commit: bool = True) -> FeedItem:
+    def read_later(self, item: FeedItem | type[FeedItem]) -> FeedItem | type[FeedItem]:
         item.read_later = True
 
         self.session.add(item)
-
-        if commit:
-            self.session.commit()
-            self.session.refresh(item)
+        self.session.commit()
+        self.session.refresh(item)
 
         return item
 
-    def save(self, item: FeedItem, commit: bool = True) -> FeedItem:
+    def save(self, item: FeedItem | type[FeedItem]) -> FeedItem | type[FeedItem]:
         item.saved_at = datetime.now()
 
         self.session.add(item)
-
-        if commit:
-            self.session.commit()
-            self.session.refresh(item)
+        self.session.commit()
+        self.session.refresh(item)
 
         return item
 
-    def bulk_get(self, item_ids: list[str]) -> list[FeedItem]:
+    def bulk_get(self, item_ids: list[str]) -> Sequence[FeedItem | type[FeedItem]]:
         items = self.session.exec(select(FeedItem).where(col(FeedItem.id).in_(item_ids))).all()
         return items
 
-    def bulk_mark_read(self, item_ids: list[str], commit: bool = True) -> list[FeedItem]:
+    def bulk_mark_read(self, item_ids: list[str]) -> Sequence[FeedItem | type[FeedItem]]:
         if not item_ids:
             return []
 
-        (
-            self.session.exec(
-                self._scope_query(
-                    update(FeedItem)
-                    .where(col(FeedItem.id).in_(item_ids))
-                    .values(read_at=datetime.now(), read_later=False)
-                )
+        self.session.exec(
+            self._scope_query(
+                update(FeedItem)
+                .where(col(FeedItem.id).in_(item_ids))
+                .values(read_at=datetime.now(), read_later=False)
             )
         )
-
-        if commit:
-            self.session.commit()
-
+        self.session.commit()
         return self.bulk_get(item_ids)
 
-    def bulk_read_later(self, item_ids: list[str], commit: bool = True) -> list[FeedItem]:
+    def bulk_read_later(self, item_ids: list[str]) -> Sequence[FeedItem | type[FeedItem]]:
         if not item_ids:
             return []
 
-        (
-            self.session.exec(
-                self._scope_query(
-                    update(FeedItem).where(col(FeedItem.id).in_(item_ids)).values(read_later=True)
-                )
+        self.session.exec(
+            self._scope_query(
+                update(FeedItem).where(col(FeedItem.id).in_(item_ids)).values(read_later=True)
             )
         )
-
-        if commit:
-            self.session.commit()
-
+        self.session.commit()
         return self.bulk_get(item_ids)
 
-    def bulk_save(self, item_ids: list[str], commit: bool = True) -> list[FeedItem]:
+    def bulk_save(self, item_ids: list[str]) -> Sequence[FeedItem | type[FeedItem]]:
         if not item_ids:
             return []
 
-        (
-            self.session.exec(
-                self._scope_query(
-                    update(FeedItem)
-                    .where(col(FeedItem.id).in_(item_ids))
-                    .values(saved_at=datetime.now())
-                )
+        self.session.exec(
+            self._scope_query(
+                update(FeedItem)
+                .where(col(FeedItem.id).in_(item_ids))
+                .values(saved_at=datetime.now())
             )
         )
-
-        if commit:
-            self.session.commit()
-
+        self.session.commit()
         return self.bulk_get(item_ids)
 
     def _scope_query(self, query):

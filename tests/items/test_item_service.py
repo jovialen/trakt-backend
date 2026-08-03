@@ -1,6 +1,3 @@
-import pytest
-from fastapi import HTTPException
-
 from trakt_backend.items import FeedItem, FeedItemQuery, FeedItemService
 
 
@@ -43,17 +40,14 @@ def test_get_item(
 ):
     item = feed_item_service.get(news_article.id)
 
+    assert item is not None
     assert item.id == news_article.id
 
 
 def test_get_item_not_found(
     feed_item_service: FeedItemService,
 ):
-    with pytest.raises(HTTPException) as exc_info:
-        feed_item_service.get(999999)
-
-    assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "Item not found"
+    assert feed_item_service.get("999999") is None
 
 
 def test_mark_item_read(
