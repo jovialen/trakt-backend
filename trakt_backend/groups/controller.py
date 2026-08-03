@@ -1,7 +1,9 @@
-from fastapi import APIRouter, HTTPException, status
+from typing import Annotated
+
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from .. import items
-from ..feeds import FeedRead, FeedServiceDep
+from ..feeds import FeedRead, FeedService, FeedServiceDep, get_feed_service
 from ..utils import PaginationQuery
 from .dto import FeedGroupCreate, FeedGroupPatch, FeedGroupUpdate
 from .model import FeedGroup
@@ -134,8 +136,14 @@ def remove_feed_from_group(
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Feed not in group")
 
 
+# We use feeds: Annotated[FeedService, Depends(get_feed_service)] here instead of the normal
+# FeedServiceDep so we can override it in the tests.
 @router.post("/{group_id}/feeds/sync")
-async def sync_group_feeds(group_id: int, groups: FeedGroupServiceDep, feeds: FeedServiceDep):
+async def sync_group_feeds(
+    group_id: int,
+    groups: FeedGroupServiceDep,
+    feeds: Annotated[FeedService, Depends(get_feed_service)],
+):
     group = groups.get(group_id)
 
     if group is None:
