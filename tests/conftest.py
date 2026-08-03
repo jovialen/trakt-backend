@@ -21,10 +21,12 @@ def session():
 
     SQLModel.metadata.create_all(engine)
 
-    with Session(engine) as session:
-        yield session
-
-    SQLModel.metadata.drop_all(engine)
+    try:
+        with Session(engine) as session:
+            yield session
+    finally:
+        SQLModel.metadata.drop_all(engine)
+        engine.dispose()
 
 
 @pytest_asyncio.fixture
