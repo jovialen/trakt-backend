@@ -1,7 +1,6 @@
 from unittest.mock import AsyncMock
 
 import pytest
-from fastapi import HTTPException
 
 from trakt_backend.feeds import (
     Feed,
@@ -68,15 +67,12 @@ def test_create_feed_with_groups(
 def test_get_feed(feed_service: FeedService, nrk_feed: Feed):
     feed = feed_service.get(nrk_feed.id)
 
+    assert feed is not None
     assert feed.id == nrk_feed.id
 
 
 def test_get_feed_not_found(feed_service: FeedService):
-    with pytest.raises(HTTPException) as exc_info:
-        feed_service.get(999999)
-
-    assert exc_info.value.status_code == 404
-    assert exc_info.value.detail == "Feed not found"
+    assert feed_service.get(999999) is None
 
 
 def test_update_feed(feed_service: FeedService, nrk_feed: Feed):
@@ -86,24 +82,11 @@ def test_update_feed(feed_service: FeedService, nrk_feed: Feed):
         groups=[],
     )
 
-    updated = feed_service.update(nrk_feed.id, update)
+    updated = feed_service.update(nrk_feed, update)
 
     assert updated.id == nrk_feed.id
     assert updated.name == "Updated name"
     assert updated.link == "https://example.com/updated.xml"
-
-
-def test_update_feed_not_found(feed_service: FeedService):
-    update = FeedUpdate(
-        name="Updated name",
-        link="https://example.com/updated.xml",
-        groups=[],
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        feed_service.update(999999, update)
-
-    assert exc_info.value.status_code == 404
 
 
 def test_patch_feed(feed_service: FeedService, nrk_feed: Feed):
@@ -111,7 +94,7 @@ def test_patch_feed(feed_service: FeedService, nrk_feed: Feed):
         name="Patched name",
     )
 
-    updated = feed_service.patch(nrk_feed.id, patch)
+    updated = feed_service.patch(nrk_feed, patch)
 
     assert updated.id == nrk_feed.id
     assert updated.name == "Patched name"
@@ -127,40 +110,17 @@ def test_patch_feed_groups(
         groups=[technology_group.id],
     )
 
-    updated = feed_service.patch(google_feed.id, patch)
+    updated = feed_service.patch(google_feed, patch)
 
     assert updated.groups == [technology_group]
-
-
-def test_patch_feed_not_found(feed_service: FeedService):
-    patch = FeedPatch(
-        name="Patched name",
-    )
-
-    with pytest.raises(HTTPException) as exc_info:
-        feed_service.patch(999999, patch)
-
-    assert exc_info.value.status_code == 404
 
 
 def test_delete_feed(feed_service: FeedService, nrk_feed: Feed):
     feed_id = nrk_feed.id
 
-    result = feed_service.delete(feed_id)
+    feed_service.delete(nrk_feed)
 
-    assert result == {"ok": True}
-
-    with pytest.raises(HTTPException) as exc_info:
-        feed_service.get(feed_id)
-
-    assert exc_info.value.status_code == 404
-
-
-def test_delete_feed_not_found(feed_service: FeedService):
-    with pytest.raises(HTTPException) as exc_info:
-        feed_service.delete(999999)
-
-    assert exc_info.value.status_code == 404
+    assert feed_service.get(feed_id) is None
 
 
 @pytest.mark.asyncio

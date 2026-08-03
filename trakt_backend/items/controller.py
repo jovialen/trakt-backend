@@ -1,6 +1,6 @@
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException, status
 
 from .dto import FeedItemQuery
 from .model import FeedItem
@@ -19,24 +19,41 @@ def list_items(query: Annotated[FeedItemQuery, Depends()], items: FeedItemServic
 
 @router.get("/{item_id}", response_model=FeedItem)
 def get_item(item_id: str, items: FeedItemServiceDep):
-    return items.get(item_id)
+    item = items.get(item_id)
+
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
+    return item
 
 
 @router.post("/{item_id}/read", response_model=FeedItem)
 def read_item(item_id: str, items: FeedItemServiceDep):
     item = items.get(item_id)
+
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
     return items.mark_read(item)
 
 
 @router.post("/{item_id}/read_later", response_model=FeedItem)
 def read_item_later(item_id: str, items: FeedItemServiceDep):
     item = items.get(item_id)
+
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
     return items.read_later(item)
 
 
 @router.post("/{item_id}/save", response_model=FeedItem)
 def save_item(item_id: str, items: FeedItemServiceDep):
     item = items.get(item_id)
+
+    if item is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Item not found")
+
     return items.save(item)
 
 

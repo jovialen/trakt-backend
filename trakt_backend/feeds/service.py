@@ -2,7 +2,7 @@ from logging import debug, exception, info
 from typing import Annotated
 
 import feedparser
-from fastapi import Depends, HTTPException
+from fastapi import Depends
 from sqlalchemy import delete
 from sqlmodel import col, select
 
@@ -19,7 +19,7 @@ class FeedService:
         self.session = session
         self.jobs = jobs
 
-    def all(self, pagination: PaginationQuery | None = None) -> list[Feed]:
+    def all(self, pagination: PaginationQuery | None = None) -> list[Feed | type[Feed]]:
         query = select(Feed)
 
         if pagination is not None:
@@ -28,7 +28,7 @@ class FeedService:
         feeds = self.session.exec(query).all()
         return feeds
 
-    def create(self, feed: FeedCreate) -> Feed:
+    def create(self, feed: FeedCreate) -> Feed | type[Feed]:
         db_feed = Feed(**feed.model_dump(exclude={"groups"}))
 
         self.session.add(db_feed)
@@ -38,54 +38,31 @@ class FeedService:
         self._add_groups_to_feed(db_feed, feed.groups)
 
         self.session.commit()
-        db_feed = self.session.get(Feed, db_feed.id)
+        self.session.refresh(db_feed)
 
         return db_feed
 
-    def get(self, feed_id: int) -> Feed:
+    def get(self, feed_id: int) -> Feed | type[Feed] | None:
         feed = self.session.get(Feed, feed_id)
-
-        if not feed:
-            raise HTTPException(status_code=404, detail="Feed not found")
-
         return feed
 
-    def update(self, feed_id: int, feed: FeedUpdate) -> Feed:
-        db_feed = self.session.get(Feed, feed_id)
-
-        if not db_feed:
-            raise HTTPException(status_code=404, detail="Feed not found")
-
-        self._patch_feed(db_feed, feed)
+    def update(self, feed: Feed | type[Feed], update: FeedUpdate) -> Feed | type[Feed]:
+        self._patch_feed(feed, update)
         self.session.commit()
-        db_feed = self.session.get(Feed, db_feed.id)
+        self.session.refresh(feed)
+        return feed
 
-        return db_feed
-
-    def patch(self, feed_id: int, patch: FeedPatch) -> Feed:
-        db_feed = self.session.get(Feed, feed_id)
-
-        if not db_feed:
-            raise HTTPException(status_code=404, detail="Feed not found")
-
-        self._patch_feed(db_feed, patch)
+    def patch(self, feed: Feed | type[Feed], patch: FeedPatch) -> Feed | type[Feed]:
+        self._patch_feed(feed, patch)
         self.session.commit()
-        db_feed = self.session.get(Feed, db_feed.id)
+        self.session.refresh(feed)
+        return feed
 
-        return db_feed
-
-    def delete(self, feed_id: int):
-        feed = self.session.get(Feed, feed_id)
-
-        if not feed:
-            raise HTTPException(status_code=404, detail="Feed not found")
-
+    def delete(self, feed: Feed | type[Feed]):
         self.session.delete(feed)
         self.session.commit()
 
-        return {"ok": True}
-
-    def sync(self, feed: Feed):
+    def sync(self, feed: Feed | type[Feed]):
         from ..items import FeedItem
 
         rss = feedparser.parse(feed.link)
@@ -120,7 +97,7 @@ class FeedService:
             len(new_items),
         )
 
-    async def queue_sync(self, feed: Feed):
+    async def queue_sync(self, feed: Feed | type[Feed]):
         from .jobs import FeedSyncJob
 
         await self.jobs.add(FeedSyncJob(feed.id, self))
