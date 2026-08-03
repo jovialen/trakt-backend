@@ -92,4 +92,4 @@ async def sync_group_feeds(group_id: int, groups: FeedGroupServiceDep, feeds: Fe
     group = groups.get(group_id)
 
     for feed in group.feeds:
-        await feeds.sync(feed)
+        await feeds.queue_sync(feed)

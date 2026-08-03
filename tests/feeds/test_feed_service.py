@@ -1,3 +1,5 @@
+from unittest.mock import AsyncMock
+
 import pytest
 from fastapi import HTTPException
 
@@ -8,6 +10,7 @@ from trakt_backend.feeds import (
     FeedService,
     FeedUpdate,
 )
+from trakt_backend.feeds.jobs import FeedSyncJob
 from trakt_backend.utils import PaginationQuery
 
 
@@ -158,3 +161,17 @@ def test_delete_feed_not_found(feed_service: FeedService):
         feed_service.delete(999999)
 
     assert exc_info.value.status_code == 404
+
+
+@pytest.mark.asyncio
+async def test_sync_feed(feed_service: FeedService, nrk_feed: Feed, jobs):
+    jobs.add = AsyncMock()
+
+    await feed_service.queue_sync(nrk_feed)
+
+    jobs.add.assert_awaited_once()
+
+    job = jobs.add.await_args.args[0]
+
+    assert isinstance(job, FeedSyncJob)
+    assert job.feed_id == nrk_feed.id

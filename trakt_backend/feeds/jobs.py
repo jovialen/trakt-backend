@@ -1,37 +1,16 @@
-from logging import debug, info
+from logging import info
 
-import feedparser
-from sqlmodel import Session
-
-from ..database import engine
 from ..jobs import Job
-from .model import Feed
+from . import FeedService
 
 
 class FeedSyncJob(Job):
-    def __init__(self, feed: Feed):
-        self.feed = feed
+    def __init__(self, feed_id: int, feeds: FeedService):
+        self.feed_id = feed_id
+        self.feeds = feeds
 
     def execute(self):
-        from ..items import FeedItem
+        info(f"Starting sync job for feed {self.feed_id}")
 
-        info(f"Starting sync job for feed {self.feed.id} ({self.feed.name})")
-
-        rss = feedparser.parse(self.feed.link)
-
-        new_items = []
-        for entry in rss.entries:
-            item = FeedItem(feed_id=self.feed.id).import_from_parsed(entry)
-
-            debug(f"Fetched entry {item.id} from feed {self.feed.id}")
-
-            # This does not discover if items get changed, but that is acceptable for now
-            # In the future, a possible fix to this might be to check if the published_at
-            # or updated_at has been moved forward
-            if item.id not in [item.id for item in self.feed.items]:
-                debug(f"Item {item.id} is new. Adding item to feed {self.feed.id}")
-                new_items.append(item)
-
-        with Session(engine) as session:
-            session.add_all(new_items)
-            session.commit()
+        feed = self.feeds.get(self.feed_id)
+        self.feeds.sync(feed)
