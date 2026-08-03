@@ -47,3 +47,17 @@ def patch_feed(feed_id: int, patch: FeedPatch, feeds: FeedServiceDep):
 @router.delete("/{feed_id}")
 def delete_feed(feed_id: int, feeds: FeedServiceDep):
     return feeds.delete(feed_id)
+
+
+@router.post("/{feed_id}/sync")
+async def sync_feed(feed_id: int, feeds: FeedServiceDep):
+    feed = feeds.get(feed_id)
+    await feeds.queue_sync(feed)
+    return {"ok": True}
+
+
+@router.post("/sync")
+async def sync_feeds(feeds: FeedServiceDep):
+    for feed in feeds.all():
+        await feeds.queue_sync(feed)
+    return {"ok": True}

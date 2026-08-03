@@ -1,7 +1,9 @@
+from unittest.mock import AsyncMock
+
 from fastapi.testclient import TestClient
 
 from tests.feeds.factory import FeedFactory
-from trakt_backend.feeds import Feed
+from trakt_backend.feeds import Feed, FeedService
 
 
 def test_new_feed(client: TestClient):
@@ -134,3 +136,38 @@ def test_delete_missing_feed(client: TestClient):
     response = client.delete("/feeds/999999")
 
     assert response.status_code == 404
+
+
+def test_sync_feed(client: TestClient, nrk_feed: Feed, feed_service: FeedService):
+    feed_service.queue_sync = AsyncMock()
+
+    response = client.post(f"/feeds/{nrk_feed.id}/sync")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+    feed_service.queue_sync.assert_awaited_once_with(nrk_feed)
+
+
+def test_sync_missing_feed(client: TestClient):
+    response = client.post("/feeds/999999/sync")
+
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Feed not found"
+
+
+def test_sync_all_feeds(client: TestClient, feed_batch: list[Feed], feed_service: FeedService):
+    feed_service.queue_sync = AsyncMock()
+
+    response = client.post("/feeds/sync")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+    assert feed_service.queue_sync.await_count == len(feed_batch)
+
+    synced_ids = {call.args[0].id for call in feed_service.queue_sync.await_args_list}
+
+    expected_ids = {feed.id for feed in feed_batch}
+
+    assert synced_ids == expected_ids
