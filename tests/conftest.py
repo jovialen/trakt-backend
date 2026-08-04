@@ -1,25 +1,22 @@
-from random import seed
-
 import pytest
 import pytest_asyncio
+from fastapi import Depends
 from fastapi.testclient import TestClient
 from sqlalchemy import Engine, event
 from sqlmodel import Session
 
-from trakt_backend import app, get_session
+from trakt_backend import app
 from trakt_backend.auth import get_current_user
+from trakt_backend.database.fixtures import get_session
 from trakt_backend.jobs import QueueManager, get_jobs
 
 
 @pytest.fixture
 def session(
     authenticated_user,
-    tenant_service,
     tenant_database_factory,
 ):
-    tenant = tenant_service.create(authenticated_user.user_id)
-
-    engine = tenant_database_factory(tenant.database_url)
+    engine = tenant_database_factory(authenticated_user.user_id)
 
     with Session(engine) as session:
         yield session
@@ -45,23 +42,26 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 @pytest.fixture
 def client(
     jobs,
-    session,
     authenticated_user,
+    tenant_database_factory,
 ):
-    def override_get_session():
-        yield session
-
     def override_get_jobs():
         yield jobs
 
     def override_get_current_user():
         yield authenticated_user
 
-    seed(67)
+    def override_get_session(
+        user=Depends(get_current_user),  # noqa: B008
+    ):
+        engine = tenant_database_factory(user.user_id)
 
-    app.dependency_overrides[get_session] = override_get_session
+        with Session(engine) as session:
+            yield session
+
     app.dependency_overrides[get_jobs] = override_get_jobs
     app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_session] = override_get_session
 
     with TestClient(app) as client:
         yield client

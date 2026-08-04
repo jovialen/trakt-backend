@@ -45,9 +45,11 @@ def tenant_service(registry_session):
 
 
 @pytest.fixture
-def tenant_database_factory(tenant_engines):
-    def factory(database_url: str):
-        if database_url not in tenant_engines:
+def tenant_database_factory():
+    engines = {}
+
+    def factory(user_id: str):
+        if user_id not in engines:
             engine = create_engine(
                 "sqlite://",
                 connect_args={"check_same_thread": False},
@@ -55,9 +57,11 @@ def tenant_database_factory(tenant_engines):
             )
 
             SQLModel.metadata.create_all(engine)
+            engines[user_id] = engine
 
-            tenant_engines[database_url] = engine
+        return engines[user_id]
 
-        return tenant_engines[database_url]
+    yield factory
 
-    return factory
+    for engine in engines.values():
+        engine.dispose()
