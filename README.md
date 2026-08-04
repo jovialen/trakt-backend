@@ -17,8 +17,32 @@ poetry install
 poetry run fastapi dev ./trakt_backend
 ```
 
-In order to deploy the backend, run the following command
+In order to deploy the backend, you need to be able to host it as a docker container. That can
+either be on a homelab, VPS, or managed docker container.
+
+In order for your data to persist, you will also have to be able to set up docker containers.
+By default, the application expects the volume to be mounted to /app/data.
 
 ```commandline
-poetry run fastapi deploy ./trakt_backend
+mkdir data
+docker build -t trakt-api .
+docker run -d --name trakt-api --env-file .env -p 8000:8000 -v ${pwd}/data:/app/data trakt-api
+```
+
+For a full deployment, I recommend setting up Caddy with the built frontend and redirecting all
+requests starting with /api to the docker container.
+
+```
+                Internet
+                    │
+               80 / 443
+                    │
+            Caddy or Nginx
+           ┌────────┴────────┐
+           │                 │
+        /api/*            Everything else
+           │                 │
+           ▼                 ▼
+     FastAPI (:8000)     Static Vue files
+                          (dist/)
 ```
