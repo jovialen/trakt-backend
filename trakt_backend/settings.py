@@ -15,7 +15,7 @@ class Settings(BaseSettings):
 
     app_environment: str = Field(default="production")
 
-    registry_db_url: str = Field(default="sqlite:///registry.db")
+    registry_db_url: str = Field(default="sqlite:///data/registry.db")
 
     clerk_secret_key: str = Field(default="")
     clerk_authorized_parties: str = Field(default="")
