@@ -65,6 +65,7 @@ def client(session: Session, jobs: QueueManager):
 
 
 pytest_plugins = [
+    "tests.auth.fixtures",
     "tests.feeds.fixtures",
     "tests.groups.fixtures",
     "tests.items.fixtures",
