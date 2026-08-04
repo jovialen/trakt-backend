@@ -18,7 +18,7 @@ class TenantService:
         tenant = self.meta_session.get(Tenant, user_id)
         return tenant
 
-    def create(self, user_id: str) -> Tenant | type[Tenant]:
+    def create(self, user_id: str, do_setup: bool = True) -> Tenant | type[Tenant]:
         with tenant_mutex:
             if tenant := self.get(user_id):
                 return tenant
@@ -27,9 +27,9 @@ class TenantService:
             tenant = self._create_tenant(user_id)
 
             # Set up database
-
-            engine = create_tenant_engine(tenant.database_url)
-            SQLModel.metadata.create_all(engine)
+            if do_setup:
+                engine = create_tenant_engine(tenant.database_url)
+                SQLModel.metadata.create_all(engine)
 
             return tenant
 

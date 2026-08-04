@@ -1,12 +1,12 @@
 from sqlmodel import Session, select
 
+from trakt_backend.database.service import get_tenant_service
 from trakt_backend.feeds import Feed
 
 
-def test_create_tenant_creates_registry_entry(
-    tenant_service,
-):
-    tenant = tenant_service.create("user_123")
+def test_create_tenant_creates_registry_entry(registry_session):
+    tenant_service = get_tenant_service(registry_session)
+    tenant = tenant_service.create("user_123", do_setup=False)
 
     assert tenant.user_id == "user_123"
     assert tenant.database_url == "sqlite:///user-user_123.db"

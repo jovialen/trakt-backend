@@ -6,7 +6,7 @@ from sqlmodel import Session, SQLModel
 
 from trakt_backend import Settings, get_session
 from trakt_backend.database.meta_fixtures import get_meta_engine, get_meta_session
-from trakt_backend.database.model import registry_metadata
+from trakt_backend.database.model import Tenant, registry_metadata
 from trakt_backend.database.service import TenantService
 
 
@@ -42,7 +42,23 @@ def tenant_engines():
 
 @pytest.fixture
 def tenant_service(registry_session):
-    return TenantService(registry_session)
+    service = TenantService(registry_session)
+
+    def create_tenant(user_id: str):
+        tenant = Tenant(
+            user_id=user_id,
+            database_url=f"sqlite:///file:{user_id}?mode=memory&cache=shared&uri=true",
+        )
+
+        service.meta_session.add(tenant)
+        service.meta_session.commit()
+        service.meta_session.refresh(tenant)
+
+        return tenant
+
+    service._create_tenant = create_tenant
+
+    return service
 
 
 @pytest.fixture

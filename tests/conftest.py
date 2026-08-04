@@ -2,12 +2,13 @@ import pytest
 import pytest_asyncio
 from fastapi import Depends
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, event
+from sqlalchemy import StaticPool, create_engine
 from sqlmodel import Session
 
 from trakt_backend import app
 from trakt_backend.auth import get_current_user
 from trakt_backend.database.fixtures import get_session
+from trakt_backend.database.model import create_tenant_engine
 from trakt_backend.jobs import QueueManager, get_jobs
 
 
@@ -32,11 +33,36 @@ async def jobs():
     await jobs.stop()
 
 
-@event.listens_for(Engine, "connect")
-def _set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+@pytest.fixture(autouse=True)
+def use_in_memory_tenant_databases(monkeypatch):
+    create_tenant_engine.cache_clear()
+
+    engines = {}
+
+    def create_memory_tenant_engine(connection_url: str):
+        if connection_url not in engines:
+            engines[connection_url] = create_engine(
+                "sqlite://",
+                connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
+            )
+
+        return engines[connection_url]
+
+    monkeypatch.setattr(
+        "trakt_backend.database.model.create_tenant_engine",
+        create_memory_tenant_engine,
+    )
+
+    monkeypatch.setattr(
+        "trakt_backend.database.fixtures.create_tenant_engine",
+        create_memory_tenant_engine,
+    )
+
+    yield
+
+    for engine in engines.values():
+        engine.dispose()
 
 
 @pytest.fixture
