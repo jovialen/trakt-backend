@@ -1,28 +1,33 @@
 from typing import Annotated
 
-from fastapi import Depends
-from sqlalchemy import Engine, event
-from sqlmodel import Session, SQLModel, create_engine
+from fastapi import Depends, HTTPException, status
+from sqlalchemy import Engine
+from sqlmodel import Session
 
-sqlite_file_name = "database.db"
-sqlite_url = f"sqlite:///{sqlite_file_name}"
-
-connect_args = {"check_same_thread": False}
-engine = create_engine(sqlite_url, connect_args=connect_args)
-
-
-@event.listens_for(Engine, "connect")
-def _set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+from ..auth import UserDep
+from ..settings import SettingsDep
+from .model import create_tenant_engine
+from .service import TenantServiceDep
 
 
-def create_db_and_tables():
-    SQLModel.metadata.create_all(engine)
+def get_engine(user: UserDep, tenants: TenantServiceDep, settings: SettingsDep):
+    # For production instances, we use webhooks for identifying new users so we can create tenants,
+    # but since webhooks don't work for localhost (which I totally didn't forget) we have to
+    # lazily create tenants as users make requests here.
+    tenant = tenants.get(user.user_id) if not settings.dev_mode else tenants.create(user.user_id)
+
+    if tenant is None:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="No tenant found"
+        )
+
+    return create_tenant_engine(tenant.connection_url, tenant.turso_token)
 
 
-def get_session():
+EngineDep = Annotated[Engine, Depends(get_engine)]
+
+
+def get_session(engine: EngineDep):
     with Session(engine) as session:
         yield session
 

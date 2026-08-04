@@ -11,11 +11,19 @@ VERSION = "0.1.0"
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env")
+    model_config = SettingsConfigDict(env_file=".env", frozen=True)
 
     app_environment: str = Field(default="production")
+
+    registry_db_url: str = Field(default="sqlite:///meta_database.db")
+    registry_db_token: str = Field(default="")
+
+    turso_org: str = Field(default="")
+    turso_api_token: str = Field(default="")
+
     clerk_secret_key: str = Field(default="")
     clerk_authorized_parties: str = Field(default="")
+    clerk_webhook_signing_secret: str = Field(default="")
 
     @computed_field
     @property
