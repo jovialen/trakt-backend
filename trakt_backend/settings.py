@@ -15,11 +15,7 @@ class Settings(BaseSettings):
 
     app_environment: str = Field(default="production")
 
-    registry_db_url: str = Field(default="sqlite:///meta_database.db")
-    registry_db_token: str = Field(default="")
-
-    turso_org: str = Field(default="")
-    turso_api_token: str = Field(default="")
+    registry_db_url: str = Field(default="sqlite:///registry.db")
 
     clerk_secret_key: str = Field(default="")
     clerk_authorized_parties: str = Field(default="")

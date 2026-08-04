@@ -21,7 +21,7 @@ def get_engine(user: UserDep, tenants: TenantServiceDep, settings: SettingsDep):
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="No tenant found"
         )
 
-    return create_tenant_engine(tenant.connection_url, tenant.turso_token)
+    return create_tenant_engine(tenant.database_url)
 
 
 EngineDep = Annotated[Engine, Depends(get_engine)]
