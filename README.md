@@ -5,9 +5,7 @@ Backend for Trakt, a cross-platform RSS feed reader.
 ## Getting started
 
 > [!IMPORTANT]
-> This project requires certain dependencies that do not support Windows as of todays date (4. aug. 2026)
-> In order to install the dependencies and run the project, you have to be on either Linux, MacOS or use
-> the Linux subsystem for Windows.
+> This project requires you to use a python version between 3.14 and up to, but not including, 4.0.
 
 [Poetry](https://python-poetry.org/) is used as the package manager for this repo. As such, you need it installed
 to run it locally.
