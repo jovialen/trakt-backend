@@ -14,8 +14,8 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env")
 
     app_environment: str = Field(default="production")
-    clerk_secret_key: str = Field()
-    clerk_authorized_parties: str = Field()
+    clerk_secret_key: str = Field(default="")
+    clerk_authorized_parties: str = Field(default="")
 
     @computed_field
     @property
