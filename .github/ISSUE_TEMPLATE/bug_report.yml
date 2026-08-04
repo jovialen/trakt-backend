@@ -36,32 +36,7 @@ body:
   - type: input
     id: url
     attributes:
-      label: Affected page / URL
-      placeholder: /projects, /, /about ...
-    validations:
-      required: false
-  - type: dropdown
-    id: device
-    attributes:
-      label: Device type
-      options:
-        - Desktop
-        - Tablet
-        - Mobile
-        - Not sure
-    validations:
-      required: false
-  - type: input
-    id: environment
-    attributes:
-      label: Browser & OS
-      placeholder: e.g. Chrome 120 on Windows 11, Safari on iOS 17
-    validations:
-      required: false
-  - type: textarea
-    id: screenshots
-    attributes:
-      label: Screenshots or screen recording
-      description: Drag and drop any images or videos here (optional).
+      label: Affected endpoint / service
+      placeholder: /groups, /feeds/{feed_id}, /items
     validations:
       required: false

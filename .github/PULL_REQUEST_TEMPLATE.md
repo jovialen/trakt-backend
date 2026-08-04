@@ -8,4 +8,3 @@
 
 - [ ] Covers issue scope
 - [ ] Test coverage of new code
-- [ ] All tests pass
