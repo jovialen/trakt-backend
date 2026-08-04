@@ -1,8 +1,10 @@
 from fastapi.testclient import TestClient
 
+from trakt_backend import app
 
-def test_get_auth_token(authenticated_client: TestClient, authenticated_user):
-    response = authenticated_client.get("/auth/")
+
+def test_get_auth_token(client, authenticated_user):
+    response = client.get("/auth/")
 
     assert response.status_code == 200
 
@@ -15,7 +17,8 @@ def test_get_auth_token(authenticated_client: TestClient, authenticated_user):
     assert body["is_valid"] is True
 
 
-def test_auth_requires_credentials(client: TestClient):
-    response = client.get("/auth/")
+def test_auth_requires_credentials():
+    with TestClient(app) as unauthenticated_client:
+        response = unauthenticated_client.get("/auth/")
 
-    assert response.status_code == 401
+        assert response.status_code == 401

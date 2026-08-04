@@ -4,7 +4,6 @@ from threading import Lock
 from typing import Annotated
 
 from fastapi import Depends
-from sqlalchemy import Engine
 from sqlmodel import Session
 
 from ..settings import SettingsDep
@@ -15,13 +14,7 @@ engine_lock = Lock()
 
 
 @lru_cache
-def get_meta_engine(settings: SettingsDep):
-    connection_url = (
-        f"sqlite+{settings.registry_db_url}?secure=true"
-        if not settings.dev_mode
-        else settings.registry_db_url
-    )
-
+def get_meta_engine(connection_url: str):
     info(f"Connecting to registry at {connection_url}")
     engine = create_database_engine(connection_url)
 
@@ -31,10 +24,9 @@ def get_meta_engine(settings: SettingsDep):
     return engine
 
 
-MetaEngineDep = Annotated[Engine, Depends(get_meta_engine)]
+def get_meta_session(settings: SettingsDep):
+    meta_engine = get_meta_engine(settings.registry_db_url)
 
-
-def get_meta_session(meta_engine: MetaEngineDep):
     with Session(meta_engine) as session:
         yield session
 

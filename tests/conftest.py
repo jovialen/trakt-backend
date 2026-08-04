@@ -1,32 +1,28 @@
-import random
+from random import seed
 
 import pytest
 import pytest_asyncio
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, StaticPool, event
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import Engine, event
+from sqlmodel import Session
 
 from trakt_backend import app, get_session
+from trakt_backend.auth import get_current_user
 from trakt_backend.jobs import QueueManager, get_jobs
 
 
 @pytest.fixture
-def session():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        echo=True,
-        poolclass=StaticPool,
-    )
+def session(
+    authenticated_user,
+    tenant_service,
+    tenant_database_factory,
+):
+    tenant = tenant_service.create(authenticated_user.user_id)
 
-    SQLModel.metadata.create_all(engine)
+    engine = tenant_database_factory(tenant.database_url)
 
-    try:
-        with Session(engine) as session:
-            yield session
-    finally:
-        SQLModel.metadata.drop_all(engine)
-        engine.dispose()
+    with Session(engine) as session:
+        yield session
 
 
 @pytest_asyncio.fixture
@@ -47,16 +43,25 @@ def _set_sqlite_pragma(dbapi_connection, connection_record):
 
 
 @pytest.fixture
-def client(session: Session, jobs: QueueManager):
+def client(
+    jobs,
+    session,
+    authenticated_user,
+):
     def override_get_session():
         yield session
 
     def override_get_jobs():
         yield jobs
 
-    random.seed(67)
+    def override_get_current_user():
+        yield authenticated_user
+
+    seed(67)
+
     app.dependency_overrides[get_session] = override_get_session
     app.dependency_overrides[get_jobs] = override_get_jobs
+    app.dependency_overrides[get_current_user] = override_get_current_user
 
     with TestClient(app) as client:
         yield client
@@ -69,4 +74,5 @@ pytest_plugins = [
     "tests.feeds.fixtures",
     "tests.groups.fixtures",
     "tests.items.fixtures",
+    "tests.database.fixtures",
 ]
