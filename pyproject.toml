@@ -12,6 +12,7 @@ dependencies = [
     "sqlmodel (>=0.0.39,<0.0.40)",
     "feedparser (>=6.0.14,<7.0.0)",
     "pydantic-settings (>=2.14.2,<3.0.0)",
+    "clerk-backend-api (>=6.0.1,<7.0.0)",
 ]
 
 
