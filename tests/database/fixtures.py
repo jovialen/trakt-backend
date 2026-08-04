@@ -4,7 +4,8 @@ import pytest
 from sqlalchemy import StaticPool, create_engine
 from sqlmodel import Session, SQLModel
 
-from trakt_backend.database.meta_fixtures import get_meta_engine
+from trakt_backend import Settings, get_session
+from trakt_backend.database.meta_fixtures import get_meta_engine, get_meta_session
 from trakt_backend.database.model import registry_metadata
 from trakt_backend.database.service import TenantService
 
@@ -65,3 +66,37 @@ def tenant_database_factory():
 
     for engine in engines.values():
         engine.dispose()
+
+
+def test_get_session_yields_session():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+
+    generator = get_session(engine)
+
+    session = next(generator)
+
+    assert isinstance(session, Session)
+
+    with pytest.raises(StopIteration):
+        next(generator)
+
+
+def test_get_meta_session_yields_session():
+    get_meta_engine.cache_clear()
+
+    settings = Settings(
+        registry_db_url="sqlite://",
+    )
+
+    generator = get_meta_session(settings)
+
+    session = next(generator)
+
+    assert isinstance(session, Session)
+
+    with pytest.raises(StopIteration):
+        next(generator)
