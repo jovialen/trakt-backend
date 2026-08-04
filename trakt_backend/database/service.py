@@ -45,7 +45,7 @@ class TenantService:
             self._delete_database(user_id)
 
     def _create_tenant(self, user_id: str):
-        tenant = Tenant(user_id=user_id, database_url=f"sqlite:///user-{user_id}.db")
+        tenant = Tenant(user_id=user_id, database_url=f"sqlite:///data/user-{user_id}.db")
 
         self.meta_session.add(tenant)
         self.meta_session.commit()

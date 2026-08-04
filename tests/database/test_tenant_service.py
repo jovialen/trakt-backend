@@ -9,7 +9,7 @@ def test_create_tenant_creates_registry_entry(registry_session):
     tenant = tenant_service.create("user_123", do_setup=False)
 
     assert tenant.user_id == "user_123"
-    assert tenant.database_url == "sqlite:///user-user_123.db"
+    assert tenant.database_url == "sqlite:///data/user-user_123.db"
 
     stored = tenant_service.get("user_123")
 
