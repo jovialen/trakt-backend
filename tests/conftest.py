@@ -1,32 +1,26 @@
-import random
-
 import pytest
 import pytest_asyncio
+from fastapi import Depends
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, StaticPool, event
-from sqlmodel import Session, SQLModel, create_engine
+from sqlalchemy import StaticPool, create_engine
+from sqlmodel import Session
 
-from trakt_backend import app, get_session
+from trakt_backend import app
+from trakt_backend.auth import get_current_user
+from trakt_backend.database.fixtures import get_session
+from trakt_backend.database.model import create_tenant_engine
 from trakt_backend.jobs import QueueManager, get_jobs
 
 
 @pytest.fixture
-def session():
-    engine = create_engine(
-        "sqlite://",
-        connect_args={"check_same_thread": False},
-        echo=True,
-        poolclass=StaticPool,
-    )
+def session(
+    authenticated_user,
+    tenant_database_factory,
+):
+    engine = tenant_database_factory(authenticated_user.user_id)
 
-    SQLModel.metadata.create_all(engine)
-
-    try:
-        with Session(engine) as session:
-            yield session
-    finally:
-        SQLModel.metadata.drop_all(engine)
-        engine.dispose()
+    with Session(engine) as session:
+        yield session
 
 
 @pytest_asyncio.fixture
@@ -39,24 +33,61 @@ async def jobs():
     await jobs.stop()
 
 
-@event.listens_for(Engine, "connect")
-def _set_sqlite_pragma(dbapi_connection, connection_record):
-    cursor = dbapi_connection.cursor()
-    cursor.execute("PRAGMA foreign_keys=ON")
-    cursor.close()
+@pytest.fixture(autouse=True)
+def use_in_memory_tenant_databases(monkeypatch):
+    create_tenant_engine.cache_clear()
+
+    engines = {}
+
+    def create_memory_tenant_engine(connection_url: str):
+        if connection_url not in engines:
+            engines[connection_url] = create_engine(
+                "sqlite://",
+                connect_args={"check_same_thread": False},
+                poolclass=StaticPool,
+            )
+
+        return engines[connection_url]
+
+    monkeypatch.setattr(
+        "trakt_backend.database.model.create_tenant_engine",
+        create_memory_tenant_engine,
+    )
+
+    monkeypatch.setattr(
+        "trakt_backend.database.fixtures.create_tenant_engine",
+        create_memory_tenant_engine,
+    )
+
+    yield
+
+    for engine in engines.values():
+        engine.dispose()
 
 
 @pytest.fixture
-def client(session: Session, jobs: QueueManager):
-    def override_get_session():
-        yield session
-
+def client(
+    jobs,
+    authenticated_user,
+    tenant_database_factory,
+):
     def override_get_jobs():
         yield jobs
 
-    random.seed(67)
-    app.dependency_overrides[get_session] = override_get_session
+    def override_get_current_user():
+        yield authenticated_user
+
+    def override_get_session(
+        user=Depends(get_current_user),  # noqa: B008
+    ):
+        engine = tenant_database_factory(user.user_id)
+
+        with Session(engine) as session:
+            yield session
+
     app.dependency_overrides[get_jobs] = override_get_jobs
+    app.dependency_overrides[get_current_user] = override_get_current_user
+    app.dependency_overrides[get_session] = override_get_session
 
     with TestClient(app) as client:
         yield client
@@ -69,4 +100,5 @@ pytest_plugins = [
     "tests.feeds.fixtures",
     "tests.groups.fixtures",
     "tests.items.fixtures",
+    "tests.database.fixtures",
 ]

@@ -1,5 +1,5 @@
 # Database
-database.db
+*.db
 
 # Python
 __pycache__/
@@ -9,3 +9,6 @@ __pycache__/
 
 # Tests
 .coverage
+
+# IDE
+.idea/

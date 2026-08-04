@@ -4,6 +4,9 @@ Backend for Trakt, a cross-platform RSS feed reader.
 
 ## Getting started
 
+> [!IMPORTANT]
+> This project requires you to use a python version between 3.14 and up to, but not including, 4.0.
+
 [Poetry](https://python-poetry.org/) is used as the package manager for this repo. As such, you need it installed
 to run it locally.
 

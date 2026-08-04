@@ -8,5 +8,26 @@
       <jdbc-url>jdbc:sqlite:C:\Users\nicol\Development\trakt\trakt_backend\database.db</jdbc-url>
       <working-dir>$ProjectFileDir$</working-dir>
     </data-source>
+    <data-source source="LOCAL" name="user-user_3HQ691wlOphuKsy9ySGHDIyOAuo-database" uuid="50c854f3-b8f5-4aaf-8867-e295563347dd">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/user-user_3HQ691wlOphuKsy9ySGHDIyOAuo-database.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="registry" uuid="836e399e-bdbd-4a82-a0b5-72b25891ddac">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/registry.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
+    <data-source source="LOCAL" name="user-user_3HSLuzQDvFuwGYrIvV96cmNeut5-database" uuid="b1f7b79f-eb86-451a-85e2-b4fe1a5cee74">
+      <driver-ref>sqlite.xerial</driver-ref>
+      <synchronize>true</synchronize>
+      <jdbc-driver>org.sqlite.JDBC</jdbc-driver>
+      <jdbc-url>jdbc:sqlite:$PROJECT_DIR$/user-user_3HSLuzQDvFuwGYrIvV96cmNeut5-database.db</jdbc-url>
+      <working-dir>$ProjectFileDir$</working-dir>
+    </data-source>
   </component>
 </project>

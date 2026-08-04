@@ -5,8 +5,7 @@ from logging import error, info
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import auth, feeds, groups, items
-from .database import create_db_and_tables
+from . import auth, database, feeds, groups, items
 from .jobs import get_jobs
 from .settings import APP_NAME, DESCRIPTION, VERSION, get_settings
 
@@ -41,7 +40,6 @@ async def lifespan(_app: FastAPI):
     jobs = get_jobs()
 
     # Set up
-    create_db_and_tables()
     jobs.start()
 
     # Run
@@ -57,6 +55,7 @@ app.include_router(auth.router)
 app.include_router(feeds.router)
 app.include_router(items.router)
 app.include_router(groups.router)
+app.include_router(database.router)
 
 
 @app.get("/", tags=["App"])

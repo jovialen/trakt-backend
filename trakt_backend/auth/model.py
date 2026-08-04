@@ -1,9 +1,12 @@
 from datetime import UTC, datetime
 
 from pydantic import BaseModel, Field, computed_field, field_validator
+from pydantic_settings import SettingsConfigDict
 
 
 class UserToken(BaseModel):
+    model_config = SettingsConfigDict(frozen=True)
+
     authorized_party: str = Field(alias="azp")
     expires_at: datetime = Field(alias="exp")
     issued_at: datetime = Field(alias="iat")
@@ -12,7 +15,7 @@ class UserToken(BaseModel):
     session_id: str = Field(alias="sid")
     sub: str = Field(alias="sub")
     version: int = Field(alias="v")
-    features: list[int] = Field(alias="fva")
+    features: tuple[int, ...] = Field(alias="fva")
     session_status: str = Field(alias="sts")
 
     @field_validator("expires_at", "issued_at", "not_valid_before", mode="before")
