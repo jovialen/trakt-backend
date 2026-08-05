@@ -106,10 +106,9 @@ class FeedService:
                 await self.jobs.add(FeedItemPullJob(item.id, items))
 
         broadcaster = get_feed_item_broadcaster()
-        if broadcaster.has_subscribers():
-            for item in new_items:
-                self.session.refresh(item)
-                broadcaster.new_item(item)
+        for item in new_items:
+            self.session.refresh(item)
+            await broadcaster.new_item(item)
 
         info(
             "Feed %s synced: %d new items",

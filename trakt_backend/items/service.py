@@ -160,8 +160,7 @@ class FeedItemService:
         self.session.refresh(item)
 
         broadcaster = get_feed_item_broadcaster()
-        if broadcaster.has_subscribers():
-            await broadcaster.updated_item(item)
+        await broadcaster.updated_item(item)
 
         return item
 
