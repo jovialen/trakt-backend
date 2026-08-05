@@ -141,7 +141,14 @@ class FeedItemService:
             exception("Failed to fetch feed item content")
             return item
 
-        result = trafilatura.extract(html, output_format="html", include_images=True)
+        result = trafilatura.extract(
+            html,
+            output_format="html",
+            include_images=True,
+            include_comments=False,
+            include_formatting=True,
+            url=item.link,
+        )
 
         if result is None:
             exception("Failed to extract feed item content")
