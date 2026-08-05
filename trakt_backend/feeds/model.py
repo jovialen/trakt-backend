@@ -14,7 +14,7 @@ RSS_FEED_REGEX = r"(?i)\bhttps?://[^\s()<>]+(?:\bfeeds\b|\brss\b|\bxml\b|\batom\
 
 class FeedBase(SQLModel):
     name: str = Field(min_length=1, max_length=50)
-    link: str = Field(min_length=1, max_length=200, regex=RSS_FEED_REGEX)
+    link: str = Field(min_length=1, max_length=200, schema_extra={"pattern": RSS_FEED_REGEX})
 
 
 class Feed(FeedBase, table=True):

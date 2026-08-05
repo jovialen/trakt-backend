@@ -5,7 +5,7 @@ from logging import error, info
 from fastapi import FastAPI, Request, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 
-from . import auth, database, feeds, groups, items
+from . import auth, database, feeds, groups, items, phrases
 from .jobs import get_jobs
 from .settings import APP_NAME, DESCRIPTION, VERSION, get_settings
 
@@ -56,6 +56,7 @@ app.include_router(feeds.router)
 app.include_router(items.router)
 app.include_router(groups.router)
 app.include_router(database.router)
+app.include_router(phrases.router)
 
 
 @app.get("/", tags=["App"])
