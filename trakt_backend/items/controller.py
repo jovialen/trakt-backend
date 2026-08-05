@@ -3,7 +3,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.sse import EventSourceResponse
 
-from .broadcaster import FeedItemBroadcasterDep
+from .broadcaster import FeedItemBroadcasterDep, stream_feed_items
 from .dto import FeedItemQuery
 from .model import FeedItem
 from .service import FeedItemServiceDep
@@ -21,14 +21,7 @@ def list_items(query: Annotated[FeedItemQuery, Depends()], items: FeedItemServic
 
 @router.get("/stream")
 async def stream_items(broadcaster: FeedItemBroadcasterDep, items: FeedItemServiceDep):
-    async def events():
-        async for item in broadcaster.subscribe():
-            if not items.contains(item):
-                continue
-
-            yield f"event: new_item\ndata: {item.model_dump_json()}\n\n"
-
-    return EventSourceResponse(events(), status_code=status.HTTP_200_OK)
+    return EventSourceResponse(stream_feed_items(broadcaster, items))
 
 
 @router.get("/{item_id}", response_model=FeedItem)

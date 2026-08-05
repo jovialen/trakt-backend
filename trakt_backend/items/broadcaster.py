@@ -30,6 +30,12 @@ class FeedItemBroadcaster:
             self.subscribers.remove(queue)
 
 
+async def stream_feed_items(broadcaster, items):
+    async for item in broadcaster.subscribe():
+        if items.contains(item):
+            yield f"event: new_item\ndata: {item.model_dump_json()}\n\n"
+
+
 @lru_cache
 def get_feed_item_broadcaster():
     return FeedItemBroadcaster()
