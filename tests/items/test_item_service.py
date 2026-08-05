@@ -1,3 +1,7 @@
+from unittest.mock import AsyncMock, patch
+
+import pytest
+
 from trakt_backend.items import FeedItem, FeedItemQuery, FeedItemService
 
 
@@ -212,9 +216,11 @@ def test_group_scoped_items(
     news_group,
     nrk_feed,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         group_scope_id=news_group.id,
     )
 
@@ -227,9 +233,11 @@ def test_feed_scoped_items(
     session,
     nrk_feed,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         feed_scope_id=nrk_feed.id,
     )
 
@@ -242,9 +250,11 @@ def test_contains_returns_true_for_feed_scope(
     session,
     nrk_feed,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         feed_scope_id=nrk_feed.id,
     )
 
@@ -255,9 +265,11 @@ def test_contains_returns_false_for_wrong_feed_scope(
     session,
     tekno_feed,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         feed_scope_id=tekno_feed.id,
     )
 
@@ -268,9 +280,11 @@ def test_contains_returns_true_for_group_scope(
     session,
     news_group,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         group_scope_id=news_group.id,
     )
 
@@ -281,10 +295,119 @@ def test_contains_returns_false_for_group_scope(
     session,
     technology_group,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         group_scope_id=technology_group.id,
     )
 
     assert not service.contains(news_article)
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_updates_item(
+    feed_item_service: FeedItemService,
+    news_article,
+):
+    news_article.content = news_article.summary
+
+    with (
+        patch(
+            "trakt_backend.items.service.trafilatura.fetch_url",
+            return_value="<html><body>Article body</body></html>",
+        ),
+        patch(
+            "trakt_backend.items.service.trafilatura.extract",
+            return_value="<p>Full article</p>",
+        ),
+    ):
+        updated = await feed_item_service.fetch_content(news_article)
+
+    assert updated.content == "<p>Full article</p>"
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_does_not_update_when_fetch_fails(
+    feed_item_service: FeedItemService,
+    news_article,
+):
+    original = news_article.content
+
+    with patch(
+        "trakt_backend.items.service.trafilatura.fetch_url",
+        return_value=None,
+    ):
+        updated = await feed_item_service.fetch_content(news_article)
+
+    assert updated.content == original
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_broadcasts_updated_item(
+    feed_item_service: FeedItemService,
+    news_article,
+):
+    with (
+        patch(
+            "trakt_backend.items.service.trafilatura.fetch_url",
+            return_value="<html></html>",
+        ),
+        patch(
+            "trakt_backend.items.service.trafilatura.extract",
+            return_value="<p>new</p>",
+        ),
+    ):
+        broadcaster = AsyncMock()
+
+        with patch(
+            "trakt_backend.items.broadcaster.get_feed_item_broadcaster",
+            return_value=broadcaster,
+        ):
+            await feed_item_service.fetch_content(news_article)
+
+    broadcaster.updated_item.assert_awaited_once()
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_returns_original_when_fetch_fails(
+    feed_item_service: FeedItemService,
+    news_article: FeedItem,
+):
+    original = news_article.content
+
+    with patch(
+        "trakt_backend.items.service.trafilatura.fetch_url",
+        return_value=None,
+    ):
+        updated = await feed_item_service.fetch_content(news_article)
+
+    assert updated.content == original
+
+
+@pytest.mark.asyncio
+async def test_fetch_content_broadcasts_update(
+    feed_item_service: FeedItemService,
+    news_article: FeedItem,
+):
+    broadcaster = AsyncMock()
+
+    with (
+        patch(
+            "trakt_backend.items.service.trafilatura.fetch_url",
+            return_value="<html></html>",
+        ),
+        patch(
+            "trakt_backend.items.service.trafilatura.extract",
+            return_value="<p>Updated</p>",
+        ),
+        patch(
+            "trakt_backend.items.broadcaster.get_feed_item_broadcaster",
+            return_value=broadcaster,
+        ),
+    ):
+        await feed_item_service.fetch_content(news_article)
+
+    broadcaster.updated_item.assert_awaited_once()
+    assert broadcaster.updated_item.await_args.args[0].id == news_article.id

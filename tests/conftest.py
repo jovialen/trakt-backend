@@ -102,4 +102,5 @@ pytest_plugins = [
     "tests.items.fixtures",
     "tests.database.fixtures",
     "tests.phrases.fixtures",
+    "tests.test_jobs",
 ]

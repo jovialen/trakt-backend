@@ -1,12 +1,15 @@
 from collections.abc import Sequence
 from datetime import datetime
+from logging import exception
 from typing import Annotated
 
+import trafilatura
 from fastapi import Depends, Query, Request
 from sqlmodel import col, select, update
 
 from ..database import SessionDep
 from ..feed_group import FeedGroupLink
+from ..jobs import JobsDep, QueueManager
 from .dto import FeedItemQuery
 from .model import FeedItem
 
@@ -15,12 +18,14 @@ class FeedItemService:
     def __init__(
         self,
         session: SessionDep,
+        jobs: QueueManager,
         group_scope_id: int | None = None,
         feed_scope_id: int | None = None,
     ):
         self.session = session
         self.group_scope_id = group_scope_id
         self.feed_scope_id = feed_scope_id
+        self.jobs = jobs
 
     def all(self, query: Annotated[FeedItemQuery, Query()]) -> Sequence[FeedItem | type[FeedItem]]:
         db_query = query.query(select(FeedItem))
@@ -127,6 +132,43 @@ class FeedItemService:
 
         return True
 
+    async def fetch_content(self, item: FeedItem | type[FeedItem]) -> FeedItem | type[FeedItem]:
+        from .broadcaster import get_feed_item_broadcaster
+
+        html = trafilatura.fetch_url(item.link)
+
+        if html is None:
+            exception("Failed to fetch feed item content")
+            return item
+
+        result = trafilatura.extract(
+            html,
+            output_format="html",
+            include_images=True,
+            include_comments=False,
+            include_formatting=True,
+            url=item.link,
+        )
+
+        if result is None:
+            exception("Failed to extract feed item content")
+            return item
+
+        item.content = result
+        self.session.add(item)
+        self.session.commit()
+        self.session.refresh(item)
+
+        broadcaster = get_feed_item_broadcaster()
+        await broadcaster.updated_item(item)
+
+        return item
+
+    async def queue_fetch_content(self, item: FeedItem | type[FeedItem]):
+        from .jobs import FeedItemPullJob
+
+        await self.jobs.add(FeedItemPullJob(item.id, self))
+
     def _scope_query(self, query):
         if self.group_scope_id is not None:
             query = query.join(FeedGroupLink, col(FeedItem.feed_id) == FeedGroupLink.feed_id).where(
@@ -139,11 +181,11 @@ class FeedItemService:
         return query
 
 
-def get_feed_item_service(session: SessionDep, request: Request):
+def get_feed_item_service(session: SessionDep, jobs: JobsDep, request: Request):
     group_id = request.path_params.get("group_id")
     feed_id = request.path_params.get("feed_id")
 
-    yield FeedItemService(session, group_id, feed_id)
+    yield FeedItemService(session, jobs, group_id, feed_id)
 
 
 FeedItemServiceDep = Annotated[FeedItemService, Depends(get_feed_item_service)]

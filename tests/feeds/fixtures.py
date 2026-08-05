@@ -1,9 +1,8 @@
 import pytest
-from fastapi.testclient import TestClient
+from fastapi import Request
 from sqlmodel import Session
 
-from trakt_backend.feeds import Feed, FeedService
-from trakt_backend.feeds.service import get_feed_service
+from trakt_backend.feeds import Feed, FeedService, get_feed_service
 from trakt_backend.groups import FeedGroup
 from trakt_backend.jobs import JobsDep
 
@@ -11,8 +10,23 @@ from .factory import FeedFactory
 
 
 @pytest.fixture
-def feed_service(client: TestClient, session: Session, jobs: JobsDep):
-    mock_service = FeedService(session, jobs)
+def feed_service(
+    client,
+    session: Session,
+    jobs: JobsDep,
+):
+    mock_service = FeedService(
+        session,
+        jobs,
+        Request(
+            {
+                "type": "http",
+                "method": "GET",
+                "path": "/",
+                "headers": [],
+            }
+        ),
+    )
 
     def override_get_feed_service():
         return mock_service
@@ -20,8 +34,6 @@ def feed_service(client: TestClient, session: Session, jobs: JobsDep):
     client.app.dependency_overrides[get_feed_service] = override_get_feed_service
 
     yield mock_service
-
-    client.app.dependency_overrides[get_feed_service] = None
 
 
 def add_feed(feed: Feed, session: Session):
