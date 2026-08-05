@@ -236,3 +236,55 @@ def test_feed_scoped_items(
     items = service.all(FeedItemQuery())
 
     assert news_article.id in [item.id for item in items]
+
+
+def test_contains_returns_true_for_feed_scope(
+    session,
+    nrk_feed,
+    news_article,
+):
+    service = FeedItemService(
+        session,
+        feed_scope_id=nrk_feed.id,
+    )
+
+    assert service.contains(news_article)
+
+
+def test_contains_returns_false_for_wrong_feed_scope(
+    session,
+    tekno_feed,
+    news_article,
+):
+    service = FeedItemService(
+        session,
+        feed_scope_id=tekno_feed.id,
+    )
+
+    assert not service.contains(news_article)
+
+
+def test_contains_returns_true_for_group_scope(
+    session,
+    news_group,
+    news_article,
+):
+    service = FeedItemService(
+        session,
+        group_scope_id=news_group.id,
+    )
+
+    assert service.contains(news_article)
+
+
+def test_contains_returns_false_for_group_scope(
+    session,
+    technology_group,
+    news_article,
+):
+    service = FeedItemService(
+        session,
+        group_scope_id=technology_group.id,
+    )
+
+    assert not service.contains(news_article)

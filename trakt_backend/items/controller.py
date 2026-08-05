@@ -1,7 +1,9 @@
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi.sse import EventSourceResponse
 
+from .broadcaster import FeedItemBroadcasterDep, stream_feed_items
 from .dto import FeedItemQuery
 from .model import FeedItem
 from .service import FeedItemServiceDep
@@ -15,6 +17,11 @@ router = APIRouter(
 @router.get("/", response_model=list[FeedItem])
 def list_items(query: Annotated[FeedItemQuery, Depends()], items: FeedItemServiceDep):
     return items.all(query)
+
+
+@router.get("/stream")
+async def stream_items(broadcaster: FeedItemBroadcasterDep, items: FeedItemServiceDep):
+    return EventSourceResponse(stream_feed_items(broadcaster, items))
 
 
 @router.get("/{item_id}", response_model=FeedItem)

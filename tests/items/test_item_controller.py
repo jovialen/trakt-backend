@@ -1,6 +1,14 @@
+import asyncio
+from unittest.mock import patch
+
+import pytest
 from fastapi.testclient import TestClient
 
-from trakt_backend.items import FeedItem
+from trakt_backend.items import FeedItem, FeedItemService
+from trakt_backend.items.broadcaster import (
+    FeedItemBroadcaster,
+    stream_feed_items,
+)
 
 
 def test_list_items(client: TestClient, article_batch: list[FeedItem]):
@@ -211,3 +219,69 @@ def test_bulk_save_items_empty(client: TestClient):
 
     assert response.status_code == 200
     assert response.json() == []
+
+
+def test_stream_items_endpoint(client):
+    async def fake_events(*_):
+        yield "event: new_item\ndata: {}\n\n"
+
+    with patch(
+        "trakt_backend.items.controller.stream_feed_items",
+        fake_events,
+    ):
+        response = client.get("/items/stream")
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")
+
+
+@pytest.mark.asyncio
+async def test_feed_item_events_streams_matching_item(
+    feed_item_service,
+    news_article,
+):
+    broadcaster = FeedItemBroadcaster()
+
+    events = stream_feed_items(broadcaster, feed_item_service)
+
+    task = asyncio.create_task(events.__anext__())
+
+    await asyncio.sleep(0)
+
+    await broadcaster.publish(news_article)
+
+    event = await asyncio.wait_for(task, timeout=1)
+
+    assert event.startswith("event: new_item")
+    assert news_article.id in event
+
+    await events.aclose()
+
+
+@pytest.mark.asyncio
+async def test_feed_item_events_filters_non_matching_items(
+    session,
+    nrk_feed,
+    tekno_feed,
+    news_article,
+):
+    service = FeedItemService(
+        session,
+        feed_scope_id=tekno_feed.id,
+    )
+
+    broadcaster = FeedItemBroadcaster()
+
+    events = stream_feed_items(broadcaster, service)
+
+    task = asyncio.create_task(events.__anext__())
+
+    await asyncio.sleep(0)
+
+    await broadcaster.publish(news_article)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(task, timeout=0.1)
+
+    task.cancel()
+    await events.aclose()
