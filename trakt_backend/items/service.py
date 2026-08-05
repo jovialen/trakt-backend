@@ -110,6 +110,23 @@ class FeedItemService:
         self.session.commit()
         return self.bulk_get(item_ids)
 
+    def contains(self, item: FeedItem) -> bool:
+        if self.feed_scope_id is not None:
+            return item.feed_id == self.feed_scope_id
+
+        if self.group_scope_id is not None:
+            return (
+                self.session.exec(
+                    select(FeedGroupLink).where(
+                        FeedGroupLink.group_id == self.group_scope_id,
+                        FeedGroupLink.feed_id == item.feed_id,
+                    )
+                ).first()
+                is not None
+            )
+
+        return True
+
     def _scope_query(self, query):
         if self.group_scope_id is not None:
             query = query.join(FeedGroupLink, col(FeedItem.feed_id) == FeedGroupLink.feed_id).where(

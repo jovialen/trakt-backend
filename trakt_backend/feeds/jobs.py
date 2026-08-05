@@ -1,4 +1,4 @@
-from logging import info
+from logging import exception, info
 
 from ..jobs import Job
 from . import FeedService
@@ -9,8 +9,13 @@ class FeedSyncJob(Job):
         self.feed_id = feed_id
         self.feeds = feeds
 
-    def execute(self):
+    async def execute(self):
         info(f"Starting sync job for feed {self.feed_id}")
 
         feed = self.feeds.get(self.feed_id)
-        self.feeds.sync(feed)
+
+        if feed is None:
+            exception(f"Feed {self.feed_id} not found")
+            return
+
+        await self.feeds.sync(feed)

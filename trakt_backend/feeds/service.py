@@ -62,8 +62,8 @@ class FeedService:
         self.session.delete(feed)
         self.session.commit()
 
-    def sync(self, feed: Feed | type[Feed]):
-        from ..items import FeedItem
+    async def sync(self, feed: Feed | type[Feed]):
+        from ..items import FeedItem, get_feed_item_broadcaster
 
         rss = feedparser.parse(feed.link)
 
@@ -90,6 +90,11 @@ class FeedService:
         if len(new_items) > 0:
             self.session.add_all(new_items)
             self.session.commit()
+
+        if (broadcaster := get_feed_item_broadcaster()).has_subscribers():
+            for item in new_items:
+                self.session.refresh(item)
+                await broadcaster.publish(item)
 
         info(
             "Feed %s synced: %d new items",
