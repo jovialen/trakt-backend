@@ -22,8 +22,7 @@ class HighlightedPhraseService:
         if pagination is not None:
             query = paginate(query, pagination)
 
-        all = self.session.exec(query).all()
-        return all
+        return self.session.exec(query).all()
 
     def create(
         self, create: HighlightedPhraseCreate
@@ -62,7 +61,7 @@ class HighlightedPhraseService:
         self,
         phrase: HighlightedPhrase | type[HighlightedPhrase],
         patch: HighlightedPhraseUpdate | HighlightedPhrasePatch,
-    ) -> HighlightedPhrase | type[HighlightedPhrase]:
+    ):
         updates = patch.model_dump(exclude_unset=True)
         for key, value in updates.items():
             setattr(phrase, key, value)

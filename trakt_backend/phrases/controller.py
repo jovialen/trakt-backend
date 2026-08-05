@@ -61,7 +61,7 @@ def patch_phrase(
     if phrase is None:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Phrase not found")
 
-    return phrases.update(phrase, patch)
+    return phrases.patch(phrase, patch)
 
 
 @router.delete("/{phrase_id}")
