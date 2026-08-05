@@ -1,8 +1,9 @@
+from collections.abc import Sequence
 from logging import debug, exception, info
 from typing import Annotated
 
 import feedparser
-from fastapi import Depends
+from fastapi import Depends, Request
 from sqlalchemy import delete
 from sqlmodel import col, select
 
@@ -15,11 +16,12 @@ from .model import Feed
 
 
 class FeedService:
-    def __init__(self, session: SessionDep, jobs: QueueManager):
+    def __init__(self, session: SessionDep, jobs: QueueManager, request: Request):
         self.session = session
         self.jobs = jobs
+        self.request = request
 
-    def all(self, pagination: PaginationQuery | None = None) -> list[Feed | type[Feed]]:
+    def all(self, pagination: PaginationQuery | None = None) -> Sequence[Feed | type[Feed]]:
         query = select(Feed)
 
         if pagination is not None:
@@ -63,7 +65,12 @@ class FeedService:
         self.session.commit()
 
     async def sync(self, feed: Feed | type[Feed]):
-        from ..items import FeedItem, get_feed_item_broadcaster
+        from ..items import (
+            FeedItem,
+            FeedItemPullJob,
+            get_feed_item_broadcaster,
+            get_feed_item_service,
+        )
 
         rss = feedparser.parse(feed.link)
 
@@ -75,7 +82,7 @@ class FeedService:
             self.session.exec(select(FeedItem.id).where(col(FeedItem.feed_id) == feed.id)).all()
         )
 
-        new_items = []
+        new_items: list[FeedItem] = []
 
         for entry in rss.get("entries", []):
             item = FeedItem(feed=feed).import_from_parsed(entry)
@@ -91,10 +98,18 @@ class FeedService:
             self.session.add_all(new_items)
             self.session.commit()
 
-        if (broadcaster := get_feed_item_broadcaster()).has_subscribers():
+        items = next(get_feed_item_service(self.session, self.jobs, self.request))
+
+        for item in new_items:
+            if (item.summary == item.content or item.content is None) and item.link:
+                debug("Item content appears incomplete. Enqueueing poll to check")
+                await self.jobs.add(FeedItemPullJob(item.id, items))
+
+        broadcaster = get_feed_item_broadcaster()
+        if broadcaster.has_subscribers():
             for item in new_items:
                 self.session.refresh(item)
-                await broadcaster.publish(item)
+                broadcaster.new_item(item)
 
         info(
             "Feed %s synced: %d new items",
@@ -108,6 +123,7 @@ class FeedService:
         await self.jobs.add(FeedSyncJob(feed.id, self))
 
     def _add_groups_to_feed(self, feed: Feed | type[Feed], group_ids: list[int]):
+        # noinspection bad-argument-type
         self.session.exec(delete(FeedGroupLink).where(FeedGroupLink.feed_id == feed.id))
 
         for group_id in group_ids:
@@ -125,8 +141,8 @@ class FeedService:
             self._add_groups_to_feed(feed, changes.groups)
 
 
-def get_feed_service(session: SessionDep, jobs: JobsDep):
-    yield FeedService(session, jobs)
+def get_feed_service(session: SessionDep, jobs: JobsDep, request: Request):
+    yield FeedService(session, jobs, request)
 
 
 FeedServiceDep = Annotated[FeedService, Depends(get_feed_service)]

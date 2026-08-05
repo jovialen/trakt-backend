@@ -15,7 +15,7 @@ async def test_publish_delivers_to_subscriber(news_article):
 
     await asyncio.sleep(0)
 
-    await broadcaster.publish(news_article)
+    await broadcaster._publish(news_article)
 
     item = await asyncio.wait_for(task, timeout=1)
 

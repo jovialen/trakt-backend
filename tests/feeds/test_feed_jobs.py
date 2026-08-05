@@ -116,7 +116,7 @@ async def test_feed_sync_job_publishes_new_items(
     }
 
     broadcaster = get_feed_item_broadcaster()
-    broadcaster.publish = AsyncMock()
+    broadcaster._publish = AsyncMock()
 
     with patch.object(broadcaster, "has_subscribers", return_value=True):
         with patch(
@@ -125,7 +125,7 @@ async def test_feed_sync_job_publishes_new_items(
         ):
             await FeedSyncJob(nrk_feed.id, feed_service).execute()
 
-    assert broadcaster.publish.await_count == 2
+    assert broadcaster._publish.await_count == 2
 
 
 @pytest.mark.asyncio
@@ -141,7 +141,7 @@ async def test_feed_sync_job_does_not_publish_without_subscribers(
     }
 
     broadcaster = get_feed_item_broadcaster()
-    broadcaster.publish = AsyncMock()
+    broadcaster._publish = AsyncMock()
 
     with patch.object(
         broadcaster,
@@ -154,4 +154,4 @@ async def test_feed_sync_job_does_not_publish_without_subscribers(
         ):
             await FeedSyncJob(nrk_feed.id, feed_service).execute()
 
-    broadcaster.publish.assert_not_awaited()
+    broadcaster._publish.assert_not_awaited()

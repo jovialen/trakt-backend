@@ -4,8 +4,14 @@ from functools import lru_cache
 from typing import Annotated
 
 from fastapi import Depends
+from pydantic import BaseModel
 
 from .model import FeedItem
+
+
+class FeedItemBroadcastEvent(BaseModel):
+    event_type: str
+    item: FeedItem
 
 
 class FeedItemBroadcaster:
@@ -15,12 +21,21 @@ class FeedItemBroadcaster:
     def has_subscribers(self) -> bool:
         return len(self.subscribers) > 0
 
-    async def publish(self, item):
-        for queue in list(self.subscribers):
-            await queue.put(item)
+    async def new_item(self, item: FeedItem):
+        await self._publish("new_item", item)
 
-    async def subscribe(self) -> AsyncGenerator[FeedItem]:
-        queue: asyncio.Queue[FeedItem] = asyncio.Queue()
+    async def updated_item(self, item: FeedItem):
+        await self._publish("updated_item", item)
+
+    async def read_item(self, item: FeedItem):
+        await self._publish("read_item", item)
+
+    async def _publish(self, event_type, item):
+        for queue in list(self.subscribers):
+            await queue.put(FeedItemBroadcastEvent(event_type=event_type, item=item))
+
+    async def subscribe(self) -> AsyncGenerator[FeedItemBroadcastEvent]:
+        queue: asyncio.Queue[FeedItemBroadcastEvent] = asyncio.Queue()
         self.subscribers.add(queue)
 
         try:
@@ -31,9 +46,9 @@ class FeedItemBroadcaster:
 
 
 async def stream_feed_items(broadcaster, items):
-    async for item in broadcaster.subscribe():
-        if items.contains(item):
-            yield f"event: new_item\ndata: {item.model_dump_json()}\n\n"
+    async for event in broadcaster.subscribe():
+        if items.contains(event.item):
+            yield f"event: {event.event_type}\ndata: {event.item.model_dump_json()}\n\n"
 
 
 @lru_cache

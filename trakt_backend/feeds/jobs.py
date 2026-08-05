@@ -1,7 +1,7 @@
 from logging import exception, info
 
 from ..jobs import Job
-from . import FeedService
+from .service import FeedService
 
 
 class FeedSyncJob(Job):

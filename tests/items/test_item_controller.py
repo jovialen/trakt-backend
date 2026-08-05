@@ -248,7 +248,7 @@ async def test_feed_item_events_streams_matching_item(
 
     await asyncio.sleep(0)
 
-    await broadcaster.publish(news_article)
+    await broadcaster._publish(news_article)
 
     event = await asyncio.wait_for(task, timeout=1)
 
@@ -278,7 +278,7 @@ async def test_feed_item_events_filters_non_matching_items(
 
     await asyncio.sleep(0)
 
-    await broadcaster.publish(news_article)
+    await broadcaster._publish(news_article)
 
     with pytest.raises(asyncio.TimeoutError):
         await asyncio.wait_for(task, timeout=0.1)
