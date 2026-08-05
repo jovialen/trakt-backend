@@ -5,6 +5,11 @@ import pytest
 from trakt_backend.jobs import Job, QueueManager
 
 
+@pytest.fixture
+def jobs():
+    return QueueManager(worker_count=1)
+
+
 class SyncJob(Job):
     def __init__(self):
         self.executed = False

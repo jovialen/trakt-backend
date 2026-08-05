@@ -6,16 +6,16 @@ from sqlmodel import Session, col, select
 
 from tests.items.factory import FeedItemFactory
 from trakt_backend.feeds.jobs import FeedSyncJob
-from trakt_backend.items import FeedItem, get_feed_item_broadcaster
+from trakt_backend.items import FeedItem, FeedItemPullJob, get_feed_item_broadcaster
 
 
 def rss_entry(
-    id: str,
+    rss_id: str,
     title: str = "Title",
     link: str = "https://example.com/item",
 ):
     return {
-        "id": id,
+        "id": rss_id,
         "title": title,
         "link": link,
         "summary": "Summary",
@@ -116,7 +116,7 @@ async def test_feed_sync_job_publishes_new_items(
     }
 
     broadcaster = get_feed_item_broadcaster()
-    broadcaster._publish = AsyncMock()
+    broadcaster.new_item = AsyncMock()
 
     with patch.object(broadcaster, "has_subscribers", return_value=True):
         with patch(
@@ -125,33 +125,38 @@ async def test_feed_sync_job_publishes_new_items(
         ):
             await FeedSyncJob(nrk_feed.id, feed_service).execute()
 
-    assert broadcaster._publish.await_count == 2
+    assert broadcaster.new_item.await_count == 2
 
 
 @pytest.mark.asyncio
-async def test_feed_sync_job_does_not_publish_without_subscribers(
+async def test_feed_sync_job_queues_content_fetch(
     session,
     nrk_feed,
     feed_service,
+    jobs,
 ):
     rss = {
         "entries": [
-            rss_entry("item-1"),
+            rss_entry(
+                "item-1",
+                link="https://example.com/article",
+            )
         ]
     }
 
-    broadcaster = get_feed_item_broadcaster()
-    broadcaster._publish = AsyncMock()
+    rss["entries"][0]["summary"] = "Summary"
+    rss["entries"][0]["content"] = [{"value": "Summary"}]
 
-    with patch.object(
-        broadcaster,
-        "has_subscribers",
-        return_value=False,
+    jobs.add = AsyncMock()
+
+    with patch(
+        "trakt_backend.feeds.service.feedparser.parse",
+        return_value=rss,
     ):
-        with patch(
-            "trakt_backend.feeds.service.feedparser.parse",
-            return_value=rss,
-        ):
-            await FeedSyncJob(nrk_feed.id, feed_service).execute()
+        await FeedSyncJob(nrk_feed.id, feed_service).execute()
 
-    broadcaster._publish.assert_not_awaited()
+    jobs.add.assert_awaited()
+
+    queued = [call.args[0] for call in jobs.add.await_args_list]
+
+    assert any(isinstance(job, FeedItemPullJob) for job in queued)

@@ -15,11 +15,12 @@ async def test_publish_delivers_to_subscriber(news_article):
 
     await asyncio.sleep(0)
 
-    await broadcaster._publish(news_article)
+    await broadcaster.new_item(news_article)
 
-    item = await asyncio.wait_for(task, timeout=1)
+    event = await asyncio.wait_for(task, timeout=1)
 
-    assert item == news_article
+    assert event.event_type == "new_item"
+    assert event.item.id == news_article.id
 
     await subscription.aclose()
 
@@ -43,3 +44,22 @@ async def test_has_subscribers():
         await task
 
     assert not broadcaster.has_subscribers()
+
+
+@pytest.mark.asyncio
+async def test_subscriber_replays_missed_events(news_article):
+    broadcaster = FeedItemBroadcaster()
+
+    await broadcaster.new_item(news_article)
+
+    events = broadcaster.subscribe(last_event_id=0)
+
+    event = await asyncio.wait_for(
+        events.__anext__(),
+        timeout=1,
+    )
+
+    assert event.id == 1
+    assert event.item.id == news_article.id
+
+    await events.aclose()

@@ -242,18 +242,24 @@ async def test_feed_item_events_streams_matching_item(
 ):
     broadcaster = FeedItemBroadcaster()
 
-    events = stream_feed_items(broadcaster, feed_item_service)
+    events = stream_feed_items(
+        broadcaster,
+        feed_item_service,
+    )
+
+    # Start the stream and consume the initial connection event
+    await events.__anext__()
 
     task = asyncio.create_task(events.__anext__())
 
     await asyncio.sleep(0)
 
-    await broadcaster._publish(news_article)
+    await broadcaster.new_item(news_article)
 
     event = await asyncio.wait_for(task, timeout=1)
 
-    assert event.startswith("event: new_item")
-    assert news_article.id in event
+    assert "event: new_item" in event
+    assert str(news_article.id) in event
 
     await events.aclose()
 
@@ -264,24 +270,41 @@ async def test_feed_item_events_filters_non_matching_items(
     nrk_feed,
     tekno_feed,
     news_article,
+    jobs,
 ):
     service = FeedItemService(
         session,
+        jobs,
         feed_scope_id=tekno_feed.id,
     )
 
     broadcaster = FeedItemBroadcaster()
-
     events = stream_feed_items(broadcaster, service)
 
-    task = asyncio.create_task(events.__anext__())
+    await events.__anext__()  # consume connection message
 
-    await asyncio.sleep(0)
-
-    await broadcaster._publish(news_article)
+    await broadcaster.new_item(news_article)
 
     with pytest.raises(asyncio.TimeoutError):
-        await asyncio.wait_for(task, timeout=0.1)
+        await asyncio.wait_for(events.__anext__(), timeout=0.1)
 
-    task.cancel()
     await events.aclose()
+
+
+def test_stream_items_accepts_last_event_id(client):
+    async def fake_events(*_):
+        yield ": connected\n\n"
+
+    with patch(
+        "trakt_backend.items.controller.stream_feed_items",
+        fake_events,
+    ) as _stream:
+        response = client.get(
+            "/items/stream",
+            headers={
+                "last-event-id": "42",
+            },
+        )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"].startswith("text/event-stream")

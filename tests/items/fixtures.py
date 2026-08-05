@@ -7,8 +7,8 @@ from trakt_backend.items import FeedItem, FeedItemService
 
 
 @pytest.fixture
-def feed_item_service(session: Session):
-    return FeedItemService(session)
+def feed_item_service(session: Session, jobs):
+    return FeedItemService(session, jobs)
 
 
 def add_feed_item(item: FeedItem, session: Session):
