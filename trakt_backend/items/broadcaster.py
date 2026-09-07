@@ -26,16 +26,16 @@ class FeedItemBroadcaster:
     def has_subscribers(self) -> bool:
         return len(self.subscribers) > 0
 
-    async def new_item(self, item: FeedItem):
+    async def new_item(self, item: FeedItem | type[FeedItem]):
         await self._publish("new_item", item)
 
-    async def updated_item(self, item: FeedItem):
+    async def updated_item(self, item: FeedItem | type[FeedItem]):
         await self._publish("updated_item", item)
 
-    async def read_item(self, item: FeedItem):
+    async def read_item(self, item: FeedItem | type[FeedItem]):
         await self._publish("read_item", item)
 
-    async def _publish(self, event_type: str, item: FeedItem):
+    async def _publish(self, event_type: str, item: FeedItem | type[FeedItem]):
         debug(f"Broadcasting {event_type} for feed item {item.id}")
 
         event = FeedItemBroadcastEvent(
