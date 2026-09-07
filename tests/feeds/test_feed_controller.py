@@ -4,6 +4,7 @@ from fastapi.testclient import TestClient
 
 from tests.feeds.factory import FeedFactory
 from trakt_backend.feeds import Feed, FeedService
+from trakt_backend.items import FeedItem
 
 
 def test_new_feed(client: TestClient):
@@ -60,7 +61,7 @@ def test_create_feed(client: TestClient):
     assert persisted.json() == created
 
 
-def test_get_feed(client: TestClient, nrk_feed: Feed):
+def test_get_feed(client: TestClient, nrk_feed: Feed, news_article: FeedItem):
     response = client.get(f"/feeds/{nrk_feed.id}")
 
     assert response.status_code == 200
@@ -70,6 +71,7 @@ def test_get_feed(client: TestClient, nrk_feed: Feed):
     assert body["id"] == nrk_feed.id
     assert body["name"] == nrk_feed.name
     assert body["link"] == nrk_feed.link
+    assert body["unread"] == 1
 
 
 def test_get_missing_feed(client: TestClient):
@@ -98,6 +100,7 @@ def test_update_feed(client: TestClient, nrk_feed: Feed):
     assert body["id"] == nrk_feed.id
     assert body["name"] == "BBC"
     assert body["link"] == "https://bbc.co.uk/rss.xml"
+    assert body["unread"] == 0
 
     persisted = client.get(f"/feeds/{nrk_feed.id}")
 
@@ -118,6 +121,7 @@ def test_patch_feed(client: TestClient, nrk_feed: Feed):
 
     assert body["name"] == "Updated NRK"
     assert body["link"] == nrk_feed.link
+    assert body["unread"] == 0
 
 
 def test_delete_feed(client: TestClient, nrk_feed: Feed):

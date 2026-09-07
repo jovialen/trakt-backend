@@ -5,6 +5,7 @@ from typing import Annotated
 
 import trafilatura
 from fastapi import Depends, Query, Request
+from sqlalchemy.sql.functions import count
 from sqlmodel import col, select, update
 
 from ..database import SessionDep
@@ -32,6 +33,14 @@ class FeedItemService:
         db_query = self._scope_query(db_query)
         items = self.session.exec(db_query).all()
         return items
+
+    def count_unread(self, feed_id: int):
+        query = (
+            select(count(col(FeedItem.id)))
+            .where(col(FeedItem.feed_id) == feed_id)
+            .where(col(FeedItem.read_at).is_(None))
+        )
+        return self.session.exec(query).one()
 
     def get(self, item_id: str) -> FeedItem | type[FeedItem] | None:
         item = self.session.exec(

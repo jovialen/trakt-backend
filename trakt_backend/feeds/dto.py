@@ -2,6 +2,7 @@ from typing import Self
 
 from pydantic import BaseModel
 
+from ..items import FeedItemService
 from .model import Feed, FeedBase
 
 
@@ -25,10 +26,12 @@ class FeedPatch(BaseModel):
 
 class FeedRead(FeedDtoBase):
     id: int
+    unread: int
 
     @classmethod
-    def from_feed(cls, feed: Feed | type[Feed]) -> Self:
+    def from_feed(cls, feed: Feed | type[Feed], items: FeedItemService) -> Self:
         return cls(
             **feed.model_dump(),
             groups=[group.id for group in feed.groups],
+            unread=items.count_unread(feed.id),
         )

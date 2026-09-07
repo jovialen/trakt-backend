@@ -93,6 +93,7 @@ class FeedService:
             if item.id not in existing_ids:
                 debug(f"New entry {item.id} in feed {feed.id}. Adding item to feed.")
                 new_items.append(item)
+                existing_ids.add(item.id)
 
         if len(new_items) > 0:
             self.session.add_all(new_items)
@@ -123,7 +124,7 @@ class FeedService:
 
     def _add_groups_to_feed(self, feed: Feed | type[Feed], group_ids: list[int]):
         # noinspection bad-argument-type
-        self.session.exec(delete(FeedGroupLink).where(FeedGroupLink.feed_id == feed.id))
+        self.session.exec(delete(FeedGroupLink).where(col(FeedGroupLink.feed_id) == feed.id))
 
         for group_id in group_ids:
             self.session.add(FeedGroupLink(feed_id=feed.id, group_id=group_id))
